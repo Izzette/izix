@@ -46,10 +46,10 @@ static inline void update_cursor () {
 
 	// cursor LOW port to vga INDEX register
 	outb (0x0F, 0x3D4);
-	outw ((unsigned char)(position & 0xFF), 0x3D5);
+	outb ((unsigned char)(position & 0xFF), 0x3D5);
 	// cursor HIGH port to vga INDEX register
-	outw (0x0E, 0x3D4);
-	outw ((unsigned char)((position >> 8) & 0xFF), 0x3D5);
+	outb (0x0E, 0x3D4);
+	outb ((unsigned char)((position >> 8) & 0xFF), 0x3D5);
 }
 
 static inline void wrap_console () {
