@@ -1,10 +1,30 @@
 // arch/x86/include/asm/io.h
 
-// Shamelessly copied straight from <linux-4.10/arch/x86/include/asm/io.h>.
+// Shamelessly copied straight from Linux 4.10 source code.
 
 /**
  * Definitions for the x86 IO instructions inb/inw/inl/outb/outw/outl.
- * Copyright (C) 2017-ish  Linus Torvalds and the Linux Authors
+ * Copyright (C) 2017  Isabell Cowan.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+/**
+ * I/O delay strategies for inb_p/outb_p.
+ * Definitions for the x86 IO instructions inb/inw/inl/outb/outw/outl.
+ * Copyright (C) 2017-ish  Linus Torvalds and the Linux authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +65,7 @@ static inline void slow_down_io () {
 #endif
 }
 
-#define BUILDIO(bwl, bw, type)						\
+#define BUILDIO(bwl, bw, type) \
 static inline void out##bwl (unsigned type value, int port)	{ \
 	asm volatile ( \
 			"out" #bwl " %" #bw "0, %w1" \
