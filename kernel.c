@@ -64,9 +64,9 @@ static inline void wrap_console () {
 		terminal_row = 0;
 }
 
-char *ulltoa (unsigned long value, char *result, int base) {
+char *ulltoa (unsigned long long value, char *result, int base) {
 	// Worst case senario digits
-	static char digits[8 * sizeof(unsigned long)];
+	static char digits[8 * sizeof(unsigned long long)];
 
 	const char *value_map;
 
@@ -219,7 +219,7 @@ void terminal_writestring (const char *data) {
 }
 
 void kernel_main (const e820_3x_entry_t *entries, e820_3x_entry_t *entries_end) {
-	char buffer[9];
+	char buffer[17];
 	size_t i, entries_length = entries_end - entries;
 
 	terminal_initialize ();
@@ -234,52 +234,52 @@ void kernel_main (const e820_3x_entry_t *entries, e820_3x_entry_t *entries_end) 
 	terminal_writestring (buffer);
 	terminal_writestring ("\n");
 
-	terminal_writestring ("BIOS int 15h eax=e820h memory map:\n");
+	terminal_writestring ("e820: BIOS-provided physical RAM map:\n");
 
 	for (i = 0; entries_length > i; ++i) {
-		terminal_writestring (" BASE: 0x");
+		if (0 == entries[i].length)
+			continue;
+		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
+			continue;
+
+		terminal_writestring ("BIOS-e820: [mem ");
+
+		terminal_writestring ("0x");
 		ulltoa (entries[i].base, buffer, 16);
-		strpadl (buffer, '0', 8);
+		strpadl (buffer, '0', 16);
 		terminal_writestring (buffer);
 
-		terminal_writestring (" LENGTH: 0x");
-		ulltoa (entries[i].length, buffer, 16);
-		strpadl (buffer, '0', 8);
+		terminal_writestring ("-0x");
+		ulltoa (entries[i].base + entries[i].length - 1, buffer, 16);
+		strpadl (buffer, '0', 16);
 		terminal_writestring (buffer);
 
-		terminal_writestring (" TYPE: ");
+		terminal_writestring ("] ");
+
 		switch (entries[i].type) {
 			case E820_TYPE_USABLE:
-				terminal_writestring ("Usable");
+				terminal_writestring ("usable");
 				break;
 			case E820_TYPE_RESERVED:
-				terminal_writestring ("Reserved");
+				terminal_writestring ("reserved");
 				break;
 			case E820_TYPE_RECLAIM:
-				terminal_writestring ("Reclaim");
+				terminal_writestring ("ACPI data");
 				break;
 			case E820_TYPE_NVS:
 				terminal_writestring ("ACPI NVS");
 				break;
 			case E820_TYPE_BAD:
-				terminal_writestring ("Bad");
+				terminal_writestring ("bad");
 				break;
 			default:
-				terminal_writestring ("Unknown?");
+				terminal_writestring ("unknown");
 		}
 
-		terminal_writestring (" XATTRS: [");
-		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
-			terminal_writestring (" Ignore ");
-		else
-			terminal_writestring (" Accept ");
-
 		if (0 != (E820_3X_XATTRS_NON_VOLITALE & entries[i].xattrs))
-			terminal_writestring (" Non-volitale ");
-		else
-			terminal_writestring (" Volitale ");
+			terminal_writestring (" persistent");
 
-		terminal_writestring ("]\n");
+		terminal_writestring ("\n");
 	}
 }
 
