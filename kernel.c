@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <asm/io.h>
+#include <izixboot/memmap.h>
 
 /* Hardware text mode color constants. */
 enum vga_color {
@@ -33,6 +34,9 @@ size_t terminal_column;
 uint8_t terminal_color;
 uint16_t *terminal_buffer;
 
+size_t strlen (const char *);
+void terminal_writestring (const char *);
+
 static inline uint8_t vga_entry_color (enum vga_color fg, enum vga_color bg) {
 	return fg | bg << 4;
 }
@@ -58,6 +62,96 @@ static inline void wrap_console () {
 
 	if (terminal_row == VGA_HEIGHT)
 		terminal_row = 0;
+}
+
+char *ulltoa (unsigned long value, char *result, int base) {
+	// Worst case senario digits
+	static char digits[8 * sizeof(unsigned long)];
+
+	const char *value_map;
+
+	static const char value_map_16[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+	};
+
+	value_map = value_map_16;
+
+	if (0 > base) {
+		terminal_writestring("ERROR: ulltoa invalid base, negative!\n");
+		return NULL;
+	}
+
+	if (16 < (size_t)base) {
+		terminal_writestring("ERROR: ulltoa invalid base, greater than 16!\n");
+		return NULL;
+	}
+
+	size_t result_index = 0;
+
+	if (0 == value) {
+		result[result_index++] = '0';
+		result[result_index] = '\0';
+		return result;
+	}
+
+	size_t digit_index = 0, digit_max;
+
+	while (0 != value) {
+		size_t digit;
+
+		digit = value % base;
+		value /= base;
+
+		digits[digit_index++] = value_map[digit];
+	}
+
+	digit_max = digit_index;
+	result_index = digit_index;
+
+	result[result_index--] = '\0';
+
+	for (digit_index = 0; digit_max > digit_index; ++digit_index)
+		result[result_index--] = digits[digit_index];
+
+	return result;
+}
+
+char *strpadl (char *str, char pad, size_t len) {
+	size_t len_diff, cur_len, src_index, dst_index;
+
+	cur_len = strlen(str);
+
+	if (cur_len >= len)
+		return str;
+
+	len_diff = len - cur_len;
+
+	for (src_index = cur_len - 1, dst_index = len - 1;
+			len_diff <= dst_index;
+			--src_index, --dst_index)
+		str[dst_index] = str[src_index];
+
+	for (dst_index = 0; len_diff > dst_index; ++dst_index)
+		str[dst_index] = pad;
+
+	str[len] = '\0';
+
+	return str;
+}
+
+char *strcat (char *dest, const char *src) {
+	char *cur = dest;
+
+	while ('\0' != *cur)
+		++cur;
+
+	while ('\0' != *cur)
+		*cur++ = *src++;
+
+	*cur = '\0';
+
+	return dest;
 }
 
 size_t strlen (const char *str) {
@@ -102,13 +196,15 @@ void terminal_putchar (char c) {
 	}
 
 	terminal_putentryat (c, terminal_color, terminal_column, terminal_row);
-	if (++terminal_column == VGA_WIDTH) {
+	if (terminal_column == VGA_WIDTH) {
 		++terminal_row;
 
 		wrap_console ();
 	}
 
 	update_cursor ();
+
+	++terminal_column;
 }
 
 void terminal_write (const char *data, size_t size) {
@@ -122,12 +218,69 @@ void terminal_writestring (const char *data) {
 	terminal_write (data, data_len);
 }
 
-void kernel_main (void) {
-	/* Initialize terminal interface */
+void kernel_main (const e820_3x_entry_t *entries, e820_3x_entry_t *entries_end) {
+	char buffer[9];
+	size_t i, entries_length = entries_end - entries;
+
 	terminal_initialize ();
 
-	/* Newline support is left as an exercise. */
-	terminal_writestring ("Hello, kernel World!\nA new line.\n");
+	terminal_writestring ("izix command line: 0x");
+	ulltoa ((unsigned long)entries, buffer, 16);
+	strpadl (buffer, '0', 8);
+	terminal_writestring (buffer);
+	terminal_writestring (" 0x");
+	ulltoa ((unsigned long)entries_end, buffer, 16);
+	strpadl (buffer, '0', 8);
+	terminal_writestring (buffer);
+	terminal_writestring ("\n");
+
+	terminal_writestring ("BIOS int 15h eax=e820h memory map:\n");
+
+	for (i = 0; entries_length > i; ++i) {
+		terminal_writestring (" BASE: 0x");
+		ulltoa (entries[i].base, buffer, 16);
+		strpadl (buffer, '0', 8);
+		terminal_writestring (buffer);
+
+		terminal_writestring (" LENGTH: 0x");
+		ulltoa (entries[i].length, buffer, 16);
+		strpadl (buffer, '0', 8);
+		terminal_writestring (buffer);
+
+		terminal_writestring (" TYPE: ");
+		switch (entries[i].type) {
+			case E820_TYPE_USABLE:
+				terminal_writestring ("Usable");
+				break;
+			case E820_TYPE_RESERVED:
+				terminal_writestring ("Reserved");
+				break;
+			case E820_TYPE_RECLAIM:
+				terminal_writestring ("Reclaim");
+				break;
+			case E820_TYPE_NVS:
+				terminal_writestring ("ACPI NVS");
+				break;
+			case E820_TYPE_BAD:
+				terminal_writestring ("Bad");
+				break;
+			default:
+				terminal_writestring ("Unknown?");
+		}
+
+		terminal_writestring (" XATTRS: [");
+		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
+			terminal_writestring (" Ignore ");
+		else
+			terminal_writestring (" Accept ");
+
+		if (0 != (E820_3X_XATTRS_NON_VOLITALE & entries[i].xattrs))
+			terminal_writestring (" Non-volitale ");
+		else
+			terminal_writestring (" Volitale ");
+
+		terminal_writestring ("]\n");
+	}
 }
 
 // vim: set ts=4 sw=4 noet syn=c:
