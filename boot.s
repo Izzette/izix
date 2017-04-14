@@ -14,8 +14,8 @@ _start:
 	mov	%esp,		%ebp
 
 // The int 15h eax=e820 memory map array.
-	mov	0x0c(%ebp),	%ebx
-	mov	0x10(%ebp),	%ecx
+	mov	0x0c(%ebp),	%ecx
+	mov	0x10(%ebp),	%ebx
 
 // We don't need anything else on this stack every again, reinitialize it.
 	mov	$0x8000,	%ebp

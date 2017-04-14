@@ -57,10 +57,10 @@ static inline void update_cursor () {
 }
 
 static inline void wrap_console () {
-	if (terminal_column == VGA_WIDTH)
+	if (terminal_column >= VGA_WIDTH)
 		terminal_column = 0;
 
-	if (terminal_row == VGA_HEIGHT)
+	if (terminal_row >= VGA_HEIGHT)
 		terminal_row = 0;
 }
 
@@ -186,25 +186,32 @@ void terminal_putentryat (char c, uint8_t color, size_t x, size_t y) {
 }
 
 void terminal_putchar (char c) {
-	if ('\n' == c) {
-		terminal_column = 0;
-		++terminal_row;
+	static size_t virtual_length = 0;
 
-		wrap_console ();
+	if ('\n' == c) {
+		if (terminal_column || 0 == virtual_length) {
+			terminal_column = 0;
+			++terminal_row;
+
+			wrap_console ();
+		}
+
+		virtual_length = 0;
 
 		return;
 	}
 
 	terminal_putentryat (c, terminal_color, terminal_column, terminal_row);
-	if (terminal_column == VGA_WIDTH) {
+
+	++virtual_length;
+
+	if (++terminal_column >= VGA_WIDTH) {
 		++terminal_row;
 
 		wrap_console ();
 	}
 
 	update_cursor ();
-
-	++terminal_column;
 }
 
 void terminal_write (const char *data, size_t size) {
@@ -218,25 +225,27 @@ void terminal_writestring (const char *data) {
 	terminal_write (data, data_len);
 }
 
-void kernel_main (const e820_3x_entry_t *entries, e820_3x_entry_t *entries_end) {
+void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32) {
+	const e820_3x_entry_t *entries = (e820_3x_entry_t *)entries_u32;
+	const size_t entry_count = (size_t)entry_count_u32;
+
 	char buffer[17];
-	size_t i, entries_length = entries_end - entries;
+	size_t i;
 
 	terminal_initialize ();
 
-	terminal_writestring ("izix command line: 0x");
-	ulltoa ((unsigned long)entries, buffer, 16);
-	strpadl (buffer, '0', 8);
+	terminal_writestring ("Kernel command line: entry_count=");
+	ulltoa ((unsigned long)entry_count_u32, buffer, 10);
 	terminal_writestring (buffer);
-	terminal_writestring (" 0x");
-	ulltoa ((unsigned long)entries_end, buffer, 16);
+	terminal_writestring (" entries=0x");
+	ulltoa ((unsigned long)entries_u32, buffer, 16);
 	strpadl (buffer, '0', 8);
 	terminal_writestring (buffer);
 	terminal_writestring ("\n");
 
 	terminal_writestring ("e820: BIOS-provided physical RAM map:\n");
 
-	for (i = 0; entries_length > i; ++i) {
+	for (i = 0; entry_count > i; ++i) {
 		if (0 == entries[i].length)
 			continue;
 		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
