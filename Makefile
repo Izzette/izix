@@ -1,11 +1,13 @@
 # Makefile
 
+SUPERARCH ?= IA32
 ARCH ?= x86
 
 CC ?= gcc
 CFLAGS ?= -O2 -Wall -Wextra
 CFLAGS := $(CFLAGS) -m32 -DIZIX \
-          -I$(shell pwd)/arch/$(ARCH)/include \
+          -I./arch/$(ARCH)/include \
+          -I./arch/$(SUPERARCH)/include \
           -ffreestanding -nostdlib
 
 all: izix.kernel

@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <asm/io.h>
 #include <izixboot/memmap.h>
+#include <izixboot/gdt.h>
+#include <izixboot/gdt32.h>
 
 /* Hardware text mode color constants. */
 enum vga_color {
@@ -198,6 +200,8 @@ void terminal_putchar (char c) {
 
 		virtual_length = 0;
 
+		update_cursor ();
+
 		return;
 	}
 
@@ -225,9 +229,15 @@ void terminal_writestring (const char *data) {
 	terminal_write (data, data_len);
 }
 
-void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32) {
+__attribute__((force_align_arg_pointer))
+void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, const uint32_t gdtr_u32) {
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	const e820_3x_entry_t *entries = (e820_3x_entry_t *)entries_u32;
+#pragma GCC diagnostic pop
 	const size_t entry_count = (size_t)entry_count_u32;
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+	const gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
+#pragma GCC diagnostic pop
 
 	char buffer[17];
 	size_t i;
@@ -239,6 +249,10 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32) {
 	terminal_writestring (buffer);
 	terminal_writestring (" entries=0x");
 	ulltoa ((unsigned long)entries_u32, buffer, 16);
+	strpadl (buffer, '0', 8);
+	terminal_writestring (buffer);
+	terminal_writestring (" gdtr=0x");
+	ulltoa ((unsigned long)gdtr_u32, buffer, 16);
 	strpadl (buffer, '0', 8);
 	terminal_writestring (buffer);
 	terminal_writestring ("\n");

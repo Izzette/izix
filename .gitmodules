@@ -1,0 +1,6 @@
+[submodule "arch/IA32/izixboot"]
+	path = arch/IA32/izixboot
+	url = https://github.com/Izzette/izixboot.git
+[submodule "izixboot"]
+	path = izixboot
+	url = https://github.com/Izzette/izixboot.git
