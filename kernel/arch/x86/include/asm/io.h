@@ -1,4 +1,4 @@
-// arch/x86/include/asm/io.h
+// kernel/arch/x86/include/asm/io.h
 
 // Shamelessly copied straight from Linux 4.10 source code.
 
