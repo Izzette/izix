@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <asm/io.h>
 #include <string.h>
+#include <format.h>
 #include <izixboot/memmap.h>
 #include <izixboot/gdt.h>
 #include <izixboot/gdt32.h>
@@ -64,82 +65,6 @@ static inline void wrap_console () {
 
 	if (terminal_row >= VGA_HEIGHT)
 		terminal_row = 0;
-}
-
-char *ulltoa (unsigned long long value, char *result, int base) {
-	// Worst case senario digits
-	static char digits[8 * sizeof(unsigned long long)];
-
-	const char *value_map;
-
-	static const char value_map_16[] = {
-		'0', '1', '2', '3', '4', '5', '6', '7',
-		'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-	};
-
-	value_map = value_map_16;
-
-	if (0 > base) {
-		terminal_writestring("ERROR: ulltoa invalid base, negative!\n");
-		return NULL;
-	}
-
-	if (16 < (size_t)base) {
-		terminal_writestring("ERROR: ulltoa invalid base, greater than 16!\n");
-		return NULL;
-	}
-
-	size_t result_index = 0;
-
-	if (0 == value) {
-		result[result_index++] = '0';
-		result[result_index] = '\0';
-		return result;
-	}
-
-	size_t digit_index = 0, digit_max;
-
-	while (0 != value) {
-		size_t digit;
-
-		digit = value % base;
-		value /= base;
-
-		digits[digit_index++] = value_map[digit];
-	}
-
-	digit_max = digit_index;
-	result_index = digit_index;
-
-	result[result_index--] = '\0';
-
-	for (digit_index = 0; digit_max > digit_index; ++digit_index)
-		result[result_index--] = digits[digit_index];
-
-	return result;
-}
-
-char *strpadl (char *str, char pad, size_t len) {
-	size_t len_diff, cur_len, src_index, dst_index;
-
-	cur_len = strlen(str);
-
-	if (cur_len >= len)
-		return str;
-
-	len_diff = len - cur_len;
-
-	for (src_index = cur_len - 1, dst_index = len - 1;
-			len_diff <= dst_index;
-			--src_index, --dst_index)
-		str[dst_index] = str[src_index];
-
-	for (dst_index = 0; len_diff > dst_index; ++dst_index)
-		str[dst_index] = pad;
-
-	str[len] = '\0';
-
-	return str;
 }
 
 void terminal_initialize (void) {

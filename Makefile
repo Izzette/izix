@@ -17,6 +17,8 @@ object_main := kernel/boot/$(BOOTLOADER)_main.o
 objects_crt := crti.o crtn.o
 objects_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_crt))
 
+.PHONY: libk_subsystem clean clean_libk clean_x86_boot clean_x86_crt clean_boot clean_kernel
+
 all: izix.kernel
 
 include $(wildcard kernel/arch/$(ARCH)/boot/*.d)
@@ -25,8 +27,10 @@ include $(wildcard kernel/boot/*.d)
 
 boot: $(object_start) $(object_main)
 
-libk/libk.a:
-	$(MAKE) -C libk libk.a
+libk_subsystem:
+	$(MAKE) -C libk
+
+lib/libk.a: libk_subsystem
 
 $(object_start):%.o:%.s
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -37,7 +41,7 @@ $(objects_crt):%.o:%.S
 $(object_main):%.o:%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-izix.kernel: lds/linker.ld libk/libk.a $(object_start) $(objects_crt) $(object_main)
+izix.kernel: lds/linker.ld lib/libk.a $(object_start) $(objects_crt) $(object_main)
 	$(CC) $(CFLAGS) -T lds/linker.ld $(object_start) $(objects_crt) $(object_main) libk/libk.a -lgcc -o izix.kernel
 
 clean: clean_libk clean_x86_boot clean_x86_crt clean_boot clean_kernel

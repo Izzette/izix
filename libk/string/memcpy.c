@@ -18,10 +18,10 @@ MKMEMCPY(word, uint16_t);
 
 void *memcpy (void *restrict dest, const void *restrict src, size_t n) {
 #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-	size_t src_as_num = (size_t)src;
+	size_t src_as_num = (size_t)src, dest_as_num = (size_t)dest;
 #pragma GCC diagnostic pop
 
-	if (0b1 & (src_as_num | n))
+	if (0b1 & (src_as_num | dest_as_num | n))
 		__byte_memcpy ((uint8_t *)dest, (uint8_t *)src, n);
 	else
 		__word_memcpy ((uint16_t *)dest, (uint16_t *)src, n >> 1);

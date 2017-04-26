@@ -13,7 +13,7 @@ size_t strlen (const char *str) {
 }
 
 size_t strnlen (const char *str, size_t n) {
-	void *memchr_result;
+	const void *memchr_result;
 	size_t len;
 
 	memchr_result = memchr (str, '\0', n);
