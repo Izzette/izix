@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <asm/io.h>
+#include <string.h>
 #include <izixboot/memmap.h>
 #include <izixboot/gdt.h>
 #include <izixboot/gdt32.h>
@@ -36,7 +37,6 @@ size_t terminal_column;
 uint8_t terminal_color;
 uint16_t *terminal_buffer;
 
-size_t strlen (const char *);
 void terminal_writestring (const char *);
 
 static inline uint8_t vga_entry_color (enum vga_color fg, enum vga_color bg) {
@@ -140,27 +140,6 @@ char *strpadl (char *str, char pad, size_t len) {
 	str[len] = '\0';
 
 	return str;
-}
-
-char *strcat (char *dest, const char *src) {
-	char *cur = dest;
-
-	while ('\0' != *cur)
-		++cur;
-
-	while ('\0' != *cur)
-		*cur++ = *src++;
-
-	*cur = '\0';
-
-	return dest;
-}
-
-size_t strlen (const char *str) {
-	size_t len = 0;
-	while (str[len])
-		len++;
-	return len;
 }
 
 void terminal_initialize (void) {

@@ -1,3 +1,4 @@
 *.o
 *.kernel
 arch/x86/include/izixboot
+libk/libk.a

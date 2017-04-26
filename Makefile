@@ -1,39 +1,60 @@
 # Makefile
 
-SUPERARCH ?= IA32
 ARCH ?= x86
+BOOTLOADER ?= izixboot
 
 CC ?= gcc
 CFLAGS ?= -O2 -Wall -Wextra
 CFLAGS := $(CFLAGS) -m32 -DIZIX \
-          -I./arch/$(ARCH)/include \
-          -I./arch/$(SUPERARCH)/include \
+          -I./kernel/include \
+          -I./kernel/arch/$(ARCH)/include \
+          -I./libk/include \
           -ffreestanding -nostdlib
+
+object_start := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_start.o
+object_main := kernel/boot/$(BOOTLOADER)_main.o
+
+objects_crt := crti.o crtn.o
+objects_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_crt))
 
 all: izix.kernel
 
-boot.s:
-crti.S:
-crtn.S:
-kernel.c:
-linker.ld:
+include $(wildcard kernel/arch/$(ARCH)/boot/*.d)
+include $(wildcard kernel/arch/$(ARCH)/crt/*.d)
+include $(wildcard kernel/boot/*.d)
 
-boot.o: boot.s
-	$(CC) $(CFLAGS) -c boot.s -o boot.o
+boot: $(object_start) $(object_main)
 
-crti.o: crti.S
-	$(CC) $(CFLAGS) -c crti.S -o crti.o
+libk/libk.a:
+	$(MAKE) -C libk libk.a
 
-crtn.o: crtn.S
-	$(CC) $(CFLAGS) -c crtn.S -o crtn.o
+$(object_start):%.o:%.s
+	$(CC) $(CFLAGS) -c $< -o $@
 
-kernel.o: arch/$(ARCH)/include/asm/io.h kernel.c
-	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
+$(objects_crt):%.o:%.S
+	$(CC) $(CFLAGS) -c $< -o $@
 
-izix.kernel: linker.ld boot.o crti.o crtn.o kernel.o
-	$(CC) $(CFLAGS) -T linker.ld -o izix.kernel boot.o crti.o crtn.o kernel.o -lgcc
+$(object_main):%.o:%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -f *.o izix.kernel
+izix.kernel: lds/linker.ld libk/libk.a $(object_start) $(objects_crt) $(object_main)
+	$(CC) $(CFLAGS) -T lds/linker.ld $(object_start) $(objects_crt) $(object_main) libk/libk.a -lgcc -o izix.kernel
+
+clean: clean_libk clean_x86_boot clean_x86_crt clean_boot clean_kernel
+
+clean_libk:
+	$(MAKE) -C libk clean
+
+clean_x86_boot:
+	rm -f kernel/arch/$(ARCH)/boot/*.o
+
+clean_x86_crt:
+	rm -f kernel/arch/$(ARCH)/crt/*.o
+
+clean_boot:
+	rm -f kernel/boot/*.o
+
+clean_kernel:
+	rm -f izix.kernel
 
 # vim: set ts=4 sw=4 noet syn=make:
