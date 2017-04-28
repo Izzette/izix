@@ -36,11 +36,11 @@ objects_bin_crt := crtbegin.o crtend.o
 objects_bin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_bin_crt))
 
 # Our video drivers.
-objects_drivers_video := vga_text.o
+objects_drivers_video := vga_text.o vga_cursor.o
 objects_drivers_video := $(addprefix kernel/drivers/video/,$(objects_drivers_video))
 
 # Our TTY drivers.
-objects_drivers_tty := tty_vga_text.o
+objects_drivers_tty := tty_driver.o tty_vga_text.o
 objects_drivers_tty := $(addprefix kernel/drivers/tty/,$(objects_drivers_tty))
 
 # All of our drivers.

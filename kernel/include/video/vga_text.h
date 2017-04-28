@@ -1,5 +1,8 @@
 // kernel/include/video/vga_text.h
 
+#ifndef IZIX_VGA_TEXT_H
+#define IZIX_VGA_TEXT_H 1
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -23,10 +26,8 @@ enum vga_color {
 	VGA_COLOR_WHITE = 15,
 };
 
-typedef struct vga_text_position_struct {
-	size_t x;
-	size_t y;
-} vga_text_position_t;
+#define VGA_COLOR_MIN 0
+#define VGA_COLOR_XMAX 16
 
 typedef struct vga_text_size_struct {
 	size_t width;
@@ -38,12 +39,36 @@ typedef struct __attribute__((packed)) vga_text_color_struct {
 	uint8_t bg : 4;
 } vga_text_color_t;
 
+typedef struct __attribute__((packed)) vga_text_entry_struct {
+	char c;
+	vga_text_color_t color;
+} vga_text_entry_t;
+
 void vga_text_init ();
 vga_text_size_t vga_text_get_size ();
-void vga_text_set_position (vga_text_position_t);
-vga_text_position_t vga_text_get_position ();
-void vga_text_putc (char);
-void vga_text_set_color (vga_text_color_t);
-vga_text_color_t vga_text_get_color ();
+// WARN: safe inputs are assumed.
+void vga_text_put_entry (vga_text_entry_t, size_t, size_t);
+
+// WARN: safe inputs are assumed.
+static inline vga_text_color_t vga_text_mkcolor (uint8_t fg, uint8_t bg) {
+	vga_text_color_t color = {
+		.fg = fg,
+		.bg = bg
+	};
+
+	return color;
+}
+
+// WARN: safe inputs are assumed.
+static inline vga_text_entry_t vga_text_mkentry (char c, vga_text_color_t color) {
+	vga_text_entry_t entry = {
+		.c = c,
+		.color = color
+	};
+
+	return entry;
+}
+
+#endif
 
 // vim: set ts=4 sw=4 noet syn=c:

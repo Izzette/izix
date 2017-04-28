@@ -25,7 +25,7 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 	char buffer[17];
 	size_t i;
 
-	tty_driver_t tty_driver_vga_text = get_tty_driver_vga_text ();
+	tty_driver_t tty_driver_vga_text = get_tty_vga ();
 
 	tty_driver_vga_text.init (&tty_driver_vga_text);
 

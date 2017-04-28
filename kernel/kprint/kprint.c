@@ -17,8 +17,6 @@ tty_driver_t get_kprint_tty_driver () {
 void kputs (const char *str) {
 	char c;
 
-	tty_driver_t kprint_tty_driver = get_kprint_tty_driver ();
-
 	while ((c = *str++))
 		kprint_tty_driver.putc (&kprint_tty_driver, c);
 }

@@ -1,1 +1,1 @@
-kernel/drivers/video/vga_text.o: libk/include/string.h kernel/arch/x86/include/asm/io.h
+kernel/drivers/video/vga_text.o: kernel/include/video/vga_text.h kernel/include/video/vga_text.h
