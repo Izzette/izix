@@ -8,6 +8,17 @@ ARCH ?= x86
 BOOTLOADER ?= izixboot
 
 
+#####################
+# Utility functions #
+#####################
+
+define uniq =
+  $(eval seen :=)
+  $(foreach _,$1,$(if $(filter $_,${seen}),,$(eval seen += $_)))
+  ${seen}
+endef
+
+
 #############################
 # Variables generate tagets #
 #############################
@@ -39,9 +50,31 @@ objects_drivers := $(objects_drivers_video) $(objects_drivers_tty)
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
+# libk string objects
+objects_libk_string := memchr.o memcpy.o strcat.o strlen.o
+objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
+
+# libk format objects
+objects_libk_format := pad.o itoa.o
+objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
+
+# All Libk format objects
+objects_libk := $(objects_libk_string) $(objects_libk_format)
+
+# Libk library
+libk := libk.a
+libk := $(addprefix libk/,$(libk))
+
 # Objects based on build tasks.
 asm_source_objects := $(object_start) $(objects_source_crt)
-c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint)
+c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(objects_libk)
+
+# Object dirs
+all_objects := $(objects_bin_crt) $(asm_source_objects) $(c_source_objects)
+all_object_dirs := $(call uniq,$(realpath $(dir $(all_objects))))
+
+# Clean targets
+CLEAN_object_dirs := $(addprefix clean_,$(all_object_dirs))
 
 # Our linker script
 linker_script := $(BOOTLOADER).ld
@@ -107,8 +140,7 @@ ASFLAGS ?= \
 	-Wall -Wextra
 ASFLAGS := \
 	$(ASFLAGS) -DIZIX \
-	-Wa,-I./kernel/arch/$(ARCH)/include \
-	-fno-zero-initialized-in-bss \
+	-Wa,-I./kernel/arch/$(ARCH)/include
 
 # Our linker flags.
 LDFLAGS := \
@@ -141,10 +173,6 @@ include $(wildcard kernel/drivers/video/*.d)
 include $(wildcard kernel/drivers/tty/*.d)
 include $(wildcard kernel/kprint/*.d)
 
-.PHONY: libk_subsystem
-libk_subsystem:
-	$(MAKE) -C libk
-
 $(asm_source_objects):%.o:%.s
 	$(CC) $(ASFLAGS) -c $< -o $@
 
@@ -154,47 +182,26 @@ $(c_source_objects):%.o:%.c
 $(objects_bin_crt):
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(shell basename $@)` && cp "$$OBJ" $@
 
-izix.kernel: $(linker_script) $(object_start) $(objects_source_crt) $(objects_bin_crt) $(objects_kernel) libk_subsystem
+$(libk): $(objects_libk)
+	$(AR) rcs $@ $(objects_libk)
+
+izix.kernel: $(linker_script) $(object_start) $(objects_source_crt) $(objects_bin_crt) $(objects_kernel) $(libk)
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 		$(link_order) \
 		-o $@
 
 .PHONY: clean
-clean: clean_libk clean_x86_boot clean_x86_crt clean_boot clean_drivers clean_kprint clean_kernel
+clean: clean_object_dirs clean_libk
+
+.PHONY: clean_object_dirs
+clean_object_dirs: $(CLEAN_object_dirs)
+
+.PHONY: $(CLEAN_object_dirs)
+$(CLEAN_object_dirs):clean_%:%
+	rm -f $(addsuffix /*.o,$<)
 
 .PHONY: clean_libk
 clean_libk:
-	$(MAKE) -C libk clean
-
-.PHONY: clean_x86_boot
-clean_x86_boot:
-	rm -f kernel/arch/$(ARCH)/boot/*.o
-
-.PHONY: clean_x86_crt
-clean_x86_crt:
-	rm -f kernel/arch/$(ARCH)/crt/*.o
-
-.PHONY: clean_boot
-clean_boot:
-	rm -f kernel/boot/*.o
-
-.PHONY: clean_drivers
-clean_drivers: clean_drivers_video clean_drivers_tty
-
-.PHONY: clean_drivers_video
-clean_drivers_video:
-	rm -f kernel/drivers/video/*.o
-
-.PHONY: clean_drivers_tty
-clean_drivers_tty:
-	rm -f kernel/drivers/tty/*.o
-
-.PHONY: clean_kprint
-clean_kprint:
-	rm -f kernel/kprint/*.o
-
-.PHONY: clean_kernel
-clean_kernel:
-	rm -f izix.kernel
+	rm -f $(libk)
 
 # vim: set ts=4 sw=4 noet syn=make:
