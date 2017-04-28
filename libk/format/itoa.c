@@ -63,7 +63,13 @@ char *prefix##toa (type value, char *result, int base) { \
 }
 
 MKITOA(ll, long long);
+
+#if __SIZEOF_LONG_LONG__ != __SIZEOF_LONG__
 MKITOA(l, long);
+#endif
+
+#if __SIZEOF_LONG__ != __SIZEOF_INT__
 MKITOA(i, int);
+#endif
 
 // vim: set ts=4 sw=4 noet syn=c:
