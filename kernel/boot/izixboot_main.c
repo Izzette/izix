@@ -3,14 +3,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <string.h>
-#include <format.h>
-
-#include <video/vga_text.h>
-
 #include <izixboot/memmap.h>
 #include <izixboot/gdt.h>
 #include <izixboot/gdt32.h>
+
+#include <string.h>
+#include <format.h>
+
+#include <tty/tty_driver.h>
+#include <tty/tty_vga_text.h>
+#include <kprint/kprint.h>
 
 __attribute__((force_align_arg_pointer))
 void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, const uint32_t gdtr_u32) {
@@ -23,22 +25,26 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 	char buffer[17];
 	size_t i;
 
-	vga_text_initialize ();
+	tty_driver_t tty_driver_vga_text = get_tty_driver_vga_text ();
 
-	vga_text_writestring ("Kernel command line: entry_count=");
+	tty_driver_vga_text.init (&tty_driver_vga_text);
+
+	set_kprint_tty_driver (tty_driver_vga_text);
+
+	kputs ("Kernel command line: entry_count=");
 	ulltoa ((unsigned long)entry_count_u32, buffer, 10);
-	vga_text_writestring (buffer);
-	vga_text_writestring (" entries=0x");
+	kputs (buffer);
+	kputs (" entries=0x");
 	ulltoa ((unsigned long)entries_u32, buffer, 16);
 	strpadl (buffer, '0', 8);
-	vga_text_writestring (buffer);
-	vga_text_writestring (" gdtr=0x");
+	kputs (buffer);
+	kputs (" gdtr=0x");
 	ulltoa ((unsigned long)gdtr_u32, buffer, 16);
 	strpadl (buffer, '0', 8);
-	vga_text_writestring (buffer);
-	vga_text_writestring ("\n");
+	kputs (buffer);
+	kputs ("\n");
 
-	vga_text_writestring ("e820: BIOS-provided physical RAM map:\n");
+	kputs ("e820: BIOS-provided physical RAM map:\n");
 
 	for (i = 0; entry_count > i; ++i) {
 		if (0 == entries[i].length)
@@ -46,45 +52,47 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
 			continue;
 
-		vga_text_writestring ("BIOS-e820: [mem ");
+		kputs ("BIOS-e820: [mem ");
 
-		vga_text_writestring ("0x");
+		kputs ("0x");
 		ulltoa (entries[i].base, buffer, 16);
 		strpadl (buffer, '0', 16);
-		vga_text_writestring (buffer);
+		kputs (buffer);
 
-		vga_text_writestring ("-0x");
+		kputs ("-0x");
 		ulltoa (entries[i].base + entries[i].length - 1, buffer, 16);
 		strpadl (buffer, '0', 16);
-		vga_text_writestring (buffer);
+		kputs (buffer);
 
-		vga_text_writestring ("] ");
+		kputs ("] ");
 
 		switch (entries[i].type) {
 			case E820_TYPE_USABLE:
-				vga_text_writestring ("usable");
+				kputs ("usable");
 				break;
 			case E820_TYPE_RESERVED:
-				vga_text_writestring ("reserved");
+				kputs ("reserved");
 				break;
 			case E820_TYPE_RECLAIM:
-				vga_text_writestring ("ACPI data");
+				kputs ("ACPI data");
 				break;
 			case E820_TYPE_NVS:
-				vga_text_writestring ("ACPI NVS");
+				kputs ("ACPI NVS");
 				break;
 			case E820_TYPE_BAD:
-				vga_text_writestring ("bad");
+				kputs ("bad");
 				break;
 			default:
-				vga_text_writestring ("unknown");
+				kputs ("unknown");
 		}
 
 		if (0 != (E820_3X_XATTRS_NON_VOLITALE & entries[i].xattrs))
-			vga_text_writestring (" persistent");
+			kputs (" persistent");
 
-		vga_text_writestring ("\n");
+		kputs ("\n");
 	}
+
+	tty_driver_vga_text.release (&tty_driver_vga_text);
 }
 
 // vim: set ts=4 sw=4 noet syn=c:
