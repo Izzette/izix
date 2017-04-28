@@ -26,13 +26,19 @@ _start:
 	mov	$0x8000,	%ebp
 	mov	%ebp,		%esp
 
+	push	%ecx
+	push	%edx
 	call	_init
+	pop	%edx
+	pop	%ecx
 
 	push	%edx
 	push	%ecx
 	push	%ebx
 	call	kernel_main
 	add	$0x8,		%sp
+
+	call	_fini
 
 	cli
 freeze:
