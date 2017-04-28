@@ -29,8 +29,7 @@ objects_drivers := $(objects_drivers_video) $(objects_drivers_tty)
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
-asm_source_objects := $(object_start)
-pp_asm_source_objects := $(objects_crt)
+asm_source_objects := $(object_start) $(objects_crt)
 c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint)
 
 .PHONY: \
@@ -58,9 +57,6 @@ libk_subsystem:
 lib/libk.a: libk_subsystem
 
 $(asm_source_objects):%.o:%.s
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(pp_asm_source_objects):%.o:%.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(c_source_objects):%.o:%.c
