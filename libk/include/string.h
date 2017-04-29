@@ -16,6 +16,19 @@ char *strncat (char *restrict, const char *restrict, size_t);
 size_t strlen (const char *);
 size_t strnlen (const char *, size_t);
 
+static inline char *strcpy (char *dest, const char *str) {
+	*dest = '\0';
+	strcat (dest, str);
+
+	return dest;
+}
+static inline char *strncpy (char *dest, const char *str, size_t n) {
+	*dest = '\0';
+	strncat (dest, str, n);
+
+	return dest;
+}
+
 #endif
 
 // vim: set ts=4 sw=4 noet syn=c:

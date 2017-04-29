@@ -7,9 +7,22 @@ static const char value_map[] = {
 	'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
 
+static inline unsigned int log2_floor (unsigned int v) {
+	unsigned int x = 0;
+
+	while (v) {
+		v >>= 1;
+		x += 1;
+	}
+
+	return x;
+}
+
 #define MKITOA(prefix, type) \
 char *u##prefix##toa (unsigned type value, char *result, int base) { \
-	char digits[sizeof(unsigned type) / base + sizeof(unsigned type) % base]; \
+	unsigned int log2_base = log2_floor ((unsigned int)base); \
+\
+	char digits[8 * sizeof(unsigned type) / log2_base + 8 * sizeof(unsigned type) % log2_base]; \
 \
 	char *cur = result; \
 \

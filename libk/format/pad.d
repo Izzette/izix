@@ -1,1 +1,1 @@
-format/pad.o: include/string.h
+libk/format/pad.o: libk/include/string.h

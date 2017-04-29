@@ -55,7 +55,7 @@ objects_libk_string := memchr.o memcpy.o strcat.o strlen.o
 objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
 
 # libk format objects
-objects_libk_format := pad.o itoa.o
+objects_libk_format := pad.o itoa.o sprintf.o
 objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
 
 # All Libk format objects

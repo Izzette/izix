@@ -1,6 +1,9 @@
 // kernel/kprint/kprint.c
 
+#include <stdarg.h>
+
 #include <string.h>
+#include <format.h>
 
 #include <tty/tty_driver.h>
 
@@ -19,6 +22,21 @@ void kputs (const char *str) {
 
 	while ((c = *str++))
 		kprint_tty_driver.putc (&kprint_tty_driver, c);
+}
+
+int kprintf (const char *format, ...) {
+	char buf[128];
+	va_list ap;
+
+	va_start(ap, format);
+
+	int ret = vsprintf (buf, format, ap);
+
+	va_end(ap);
+
+	kputs (buf);
+
+	return ret;
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

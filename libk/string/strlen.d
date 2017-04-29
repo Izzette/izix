@@ -1,1 +1,1 @@
-string/strlen.o: include/string.h
+libk/string/strlen.o: libk/include/string.h

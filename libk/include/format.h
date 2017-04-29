@@ -4,6 +4,7 @@
 #define _IZIX_LIBK_FORMAT_H 1
 
 #include <stddef.h>
+#include <stdarg.h>
 
 char *strpadl (char *, char, size_t);
 char *strpadr (char *, char, size_t);
@@ -34,6 +35,9 @@ static inline char *itoa (int value, char *result, int base) {
 	return ltoa ((long)value, result, base);
 }
 #endif
+
+int sprintf (char *, const char *, ...);
+int vsprintf (char *, const char *, va_list);
 
 #endif
 

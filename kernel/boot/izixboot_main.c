@@ -22,7 +22,6 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 #pragma GCC diagnostic pop
 	const size_t entry_count = (size_t)entry_count_u32;
 
-	char buffer[17];
 	size_t i;
 
 	tty_driver_t tty_driver_vga_text = get_tty_vga ();
@@ -31,18 +30,14 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 
 	set_kprint_tty_driver (tty_driver_vga_text);
 
-	kputs ("Kernel command line: entry_count=");
-	ulltoa ((unsigned long)entry_count_u32, buffer, 10);
-	kputs (buffer);
-	kputs (" entries=0x");
-	ulltoa ((unsigned long)entries_u32, buffer, 16);
-	strpadl (buffer, '0', 8);
-	kputs (buffer);
-	kputs (" gdtr=0x");
-	ulltoa ((unsigned long)gdtr_u32, buffer, 16);
-	strpadl (buffer, '0', 8);
-	kputs (buffer);
-	kputs ("\n");
+	kprintf (
+		"Kernel command line: "
+			"entry_count=%zd "
+			"entries=%p "
+			"gdtr=%p\n",
+		entry_count,
+		entries,
+		gdtr);
 
 	kputs ("e820: BIOS-provided physical RAM map:\n");
 
@@ -52,44 +47,39 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
 			continue;
 
-		kputs ("BIOS-e820: [mem ");
+		uint32_t base, end;
+		char *type;
+		char *xattr;
 
-		kputs ("0x");
-		ulltoa (entries[i].base, buffer, 16);
-		strpadl (buffer, '0', 16);
-		kputs (buffer);
-
-		kputs ("-0x");
-		ulltoa (entries[i].base + entries[i].length - 1, buffer, 16);
-		strpadl (buffer, '0', 16);
-		kputs (buffer);
-
-		kputs ("] ");
+		base = entries[i].base;
+		end  = base + entries[i].length - 1;
 
 		switch (entries[i].type) {
 			case E820_TYPE_USABLE:
-				kputs ("usable");
+				type = "usable";
 				break;
 			case E820_TYPE_RESERVED:
-				kputs ("reserved");
+				type = "reserved";
 				break;
 			case E820_TYPE_RECLAIM:
-				kputs ("ACPI data");
+				type = "ACPI data";
 				break;
 			case E820_TYPE_NVS:
-				kputs ("ACPI NVS");
+				type = "ACPI NVS";
 				break;
 			case E820_TYPE_BAD:
-				kputs ("bad");
+				type = "bad";
 				break;
 			default:
-				kputs ("unknown");
+				type = "unknown";
 		}
 
 		if (0 != (E820_3X_XATTRS_NON_VOLITALE & entries[i].xattrs))
-			kputs (" persistent");
+			xattr = " persistent";
+		else
+			xattr = "";
 
-		kputs ("\n");
+		kprintf ("BIOS-e820: [mem 0x%016x-0x%016x] %s%s\n", base, end, type, xattr);
 	}
 
 	tty_driver_vga_text.release (&tty_driver_vga_text);
