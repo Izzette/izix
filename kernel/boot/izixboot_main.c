@@ -10,16 +10,19 @@
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
 #include <mm/gdt.h>
+#include <mm/e820.h>
 
 __attribute__((force_align_arg_pointer))
-void kernel_main (uint32_t entry_count_u32, uint32_t entries_u32, uint32_t gdtr_u32) {
+void kernel_main (
+		uint32_t e820_entry_count_u32,
+		uint32_t e820_entries_u32,
+		uint32_t gdtr_u32
+) {
+	size_t e820_entry_count = (size_t)e820_entry_count_u32;
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-	e820_3x_entry_t *entries = (e820_3x_entry_t *)entries_u32;
+	e820_3x_entry_t *e820_entries = (e820_3x_entry_t *)e820_entries_u32;
 	gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
 #pragma GCC diagnostic pop
-	size_t entry_count = (size_t)entry_count_u32;
-
-	size_t i;
 
 	tty_driver_t tty_driver_vga_text = get_tty_vga ();
 
@@ -29,55 +32,15 @@ void kernel_main (uint32_t entry_count_u32, uint32_t entries_u32, uint32_t gdtr_
 
 	kprintf (
 		"Kernel command line: "
-			"entry_count=%zd "
-			"entries=%p "
+			"e820_entry_count=%zd "
+			"e820_entries=%p "
 			"gdtr=%p\n",
-		entry_count,
-		entries,
+		e820_entry_count,
+		e820_entries,
 		gdtr);
 
-	kputs ("e820: BIOS-provided physical RAM map:\n");
-
-	for (i = 0; entry_count > i; ++i) {
-		if (0 == entries[i].length)
-			continue;
-		if (0 == (E820_3X_XATTRS_DO_NOT_IGNORE & entries[i].xattrs))
-			continue;
-
-		uint32_t base, end;
-		char *type;
-		char *xattr;
-
-		base = entries[i].base;
-		end  = base + entries[i].length - 1;
-
-		switch (entries[i].type) {
-			case E820_TYPE_USABLE:
-				type = "usable";
-				break;
-			case E820_TYPE_RESERVED:
-				type = "reserved";
-				break;
-			case E820_TYPE_RECLAIM:
-				type = "ACPI data";
-				break;
-			case E820_TYPE_NVS:
-				type = "ACPI NVS";
-				break;
-			case E820_TYPE_BAD:
-				type = "bad";
-				break;
-			default:
-				type = "unknown";
-		}
-
-		if (0 != (E820_3X_XATTRS_NON_VOLITALE & entries[i].xattrs))
-			xattr = " persistent";
-		else
-			xattr = "";
-
-		kprintf ("BIOS-e820: [mem 0x%016x-0x%016x] %s%s\n", base, end, type, xattr);
-	}
+	e820_register (e820_entry_count, e820_entries);
+	e820_dump_entries ();
 
 	gdt_register (gdtr);
 	gdt_dump_entries ();

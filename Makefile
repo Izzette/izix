@@ -52,7 +52,7 @@ objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
 objects_mm :=
 ifeq (x86,$(ARCH))
-objects_mm := $(objects_mm) kernel/arch/$(ARCH)/mm/gdt.o
+objects_mm := $(objects_mm) kernel/arch/$(ARCH)/mm/gdt.o kernel/arch/$(ARCH)/mm/e820.o
 endif
 
 # libk string objects
