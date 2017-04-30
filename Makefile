@@ -77,6 +77,7 @@ c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(object
 # Object dirs
 all_objects := $(objects_bin_crt) $(asm_source_objects) $(c_source_objects)
 all_object_dirs := $(call uniq,$(realpath $(dir $(all_objects))))
+all_object_dirs := $(all_object_dirs:$(CURDIR)/%=%)
 
 # Clean targets
 CLEAN_object_dirs := $(addprefix clean_,$(all_object_dirs))
@@ -197,7 +198,7 @@ izix.kernel: $(linker_script) $(object_start) $(objects_source_crt) $(objects_bi
 		-o $@
 
 .PHONY: clean
-clean: clean_object_dirs clean_libk
+clean: clean_object_dirs clean_libk clean_izix.kernel
 
 .PHONY: clean_object_dirs
 clean_object_dirs: $(CLEAN_object_dirs)
@@ -209,5 +210,9 @@ $(CLEAN_object_dirs):clean_%:%
 .PHONY: clean_libk
 clean_libk:
 	rm -f $(libk)
+
+.PHONY: clean_izix.kernel
+clean_izix.kernel:
+	rm -f izix.kernel
 
 # vim: set ts=4 sw=4 noet syn=make:
