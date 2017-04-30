@@ -127,6 +127,8 @@ link_order := \
 # Our toolchain binaries.
 CC ?= gcc
 AR ?= ar
+STRIP ?= strip
+OBJCOPY ?= objcopy
 # We will use $(CC) for linking and assembling.
 # LD ?=
 # AS ?=
@@ -153,6 +155,17 @@ LDFLAGS := \
 	-L./libk \
 	-Wl,-T$(linker_script)
 
+STRIPFLAGS ?= \
+	--remove-section=.note.gnu.gold-version \
+	--remove-section=.comment \
+	--remove-section=.note \
+	--remove-section=.note.gnu.build-id \
+	--remove-section=.note.ABI-tag
+STRIPFLAGS := \
+	--strip-all \
+	--strip-unneeded \
+	$(STRIPFLAGS)
+
 # Bootloader specific flags.
 ifeq (izixboot,$(BOOTLOADER))
 CFLAGS := \
@@ -169,6 +182,7 @@ endif
 ####################
 
 # Our default target must go first.
+.PHONY: all
 all: izix.kernel
 
 # All our included dependancies.
@@ -197,8 +211,15 @@ izix.kernel: $(linker_script) $(object_start) $(objects_source_crt) $(objects_bi
 		$(link_order) \
 		-o $@
 
+.PHONY: debug
+debug: izix.debug
+
+izix.debug: izix.kernel
+	$(OBJCOPY) --only-keep-debug \
+		izix.kernel izix.debug
+
 .PHONY: clean
-clean: clean_object_dirs clean_libk clean_izix.kernel
+clean: clean_object_dirs clean_libk clean_izix.kernel clean_izix.debug
 
 .PHONY: clean_object_dirs
 clean_object_dirs: $(CLEAN_object_dirs)
@@ -214,5 +235,14 @@ clean_libk:
 .PHONY: clean_izix.kernel
 clean_izix.kernel:
 	rm -f izix.kernel
+
+.PHONY: clean_izix.debug
+clean_izix.debug:
+	rm -f izix.debug
+
+.PHONY: strip
+strip:
+	$(STRIP) $(STRIPFLAGS) \
+		izix.kernel
 
 # vim: set ts=4 sw=4 noet syn=make:
