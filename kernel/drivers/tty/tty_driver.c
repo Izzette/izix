@@ -24,7 +24,7 @@ bool tty_wrap_console_use_size (
 	}
 
 	if (driver->position.y >= size.height) {
-		driver->position.y = 0;
+		driver->position.y = size.height - 1;
 
 		return true;
 	}

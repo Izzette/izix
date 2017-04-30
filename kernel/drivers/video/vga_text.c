@@ -35,11 +35,22 @@ void vga_text_put_entry (
 		vga_text_entry_t entry,
 		size_t x, size_t y
 ) {
-	vga_text_size_t size = vga_text_get_size ();
-
-	const size_t index = y * size.width + x;
+	const size_t index = vga_text_size.width * y + x;
 
 	vga_text_buffer[index] = entry;
+}
+
+void vga_text_scoll_one_line () {
+	size_t dx, dy, sx, sy;
+
+	for (dy = 0, sy = 1; sy < vga_text_size.height; dy++, sy++) {
+		for (dx = 0, sx = 0; sx < vga_text_size.width; dx++, sx++) {
+			size_t si = vga_text_size.width * sy + sx;
+			vga_text_entry_t entry = vga_text_buffer[si];
+
+			vga_text_put_entry (entry, dx, dy);
+		}
+	}
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

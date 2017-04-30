@@ -48,6 +48,7 @@ void vga_text_init ();
 vga_text_size_t vga_text_get_size ();
 // WARN: safe inputs are assumed.
 void vga_text_put_entry (vga_text_entry_t, size_t, size_t);
+void vga_text_scoll_one_line ();
 
 // WARN: safe inputs are assumed.
 static inline vga_text_color_t vga_text_mkcolor (uint8_t fg, uint8_t bg) {

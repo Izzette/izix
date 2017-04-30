@@ -1,6 +1,7 @@
 // kernel/drivers/tty/tty_vga_text.c
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #include <video/vga_text.h>
 #include <video/vga_cursor.h>
@@ -68,6 +69,7 @@ static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
 	vga_text_entry_t entry;
 	size_t next_stop;
 	size_t i;
+	bool need_scroll;
 
 	switch (c) {
 		case '\n':
@@ -87,7 +89,9 @@ static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
 
 				this->position.x += 1;
 
-				tty_wrap_console_use_size (this, size);
+				need_scroll = tty_wrap_console_use_size (this, size);
+				if (need_scroll)
+					vga_text_scoll_one_line ();
 			}
 
 			privdata_ptr->virtual_length += next_stop;
@@ -101,7 +105,10 @@ static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
 			privdata_ptr->virtual_length += 1;
 	}
 
-	tty_wrap_console_use_size (this, size);
+	need_scroll = tty_wrap_console_use_size (this, size);
+	if (need_scroll)
+		vga_text_scoll_one_line ();
+
 	vga_cursor_set (this->position.x, this->position.y);
 }
 
