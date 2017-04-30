@@ -52,6 +52,9 @@
  *		Linus
  */
 
+#ifndef IZIX_ASM_IO_H
+#define IZIX_ASM_IO_H 1
+
 static inline void native_io_delay () {
 	asm volatile ("outb %al, $0x80");
 }
@@ -106,5 +109,7 @@ static inline void ins##bwl (int port, void *addr, unsigned long count) { \
 BUILDIO(b, b, char)
 BUILDIO(w, w, short)
 BUILDIO(l, , int)
+
+#endif
 
 // vim: set ts=4 sw=4 noet syn=c:
