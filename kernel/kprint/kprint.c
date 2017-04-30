@@ -6,11 +6,14 @@
 #include <format.h>
 
 #include <tty/tty_driver.h>
+#include <kprint/kprint.h>
 
 static tty_driver_t kprint_tty_driver;
 
 void set_kprint_tty_driver (tty_driver_t driver) {
 	memcpy (&kprint_tty_driver, &driver, sizeof(tty_driver_t));
+
+	kprintf ("kprint: Using TTY driver %s.\n", kprint_tty_driver.term_descriptor);
 }
 
 tty_driver_t get_kprint_tty_driver () {

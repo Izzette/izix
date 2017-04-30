@@ -31,10 +31,10 @@ void kernel_main (
 	set_kprint_tty_driver (tty_driver_vga_text);
 
 	kprintf (
-		"Kernel command line: "
-			"e820_entry_count=%zd "
-			"e820_entries=%p "
-			"gdtr=%p\n",
+		"boot/izixboot_main: Provided command line:\n"
+			"\te820_entry_count=%zd\n"
+			"\te820_entries=%p\n"
+			"\tgdtr=%p\n",
 		e820_entry_count,
 		e820_entries,
 		gdtr);
