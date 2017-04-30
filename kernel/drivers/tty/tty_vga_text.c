@@ -65,35 +65,43 @@ static bool tty_vga_release (tty_driver_t *this) {
 static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
 	tty_vga_privdata_t *privdata_ptr = (tty_vga_privdata_t *)this->pimpl;
 	tty_size_t size = this->get_size (this);
+	vga_text_entry_t entry;
+	size_t next_stop;
+	size_t i;
 
-	if ('\n' == c) {
-		if (this->position.x || 0 == privdata_ptr->virtual_length) {
-			this->position.x = 0;
-			this->position.y += 1;
-		}
+	switch (c) {
+		case '\n':
+			if (this->position.x || 0 == privdata_ptr->virtual_length) {
+				this->position.x = 0;
+				this->position.y += 1;
+			}
 
-		privdata_ptr->virtual_length = 0;
+			privdata_ptr->virtual_length = 0;
+			break;
+		case '\t':
+			next_stop = 8 - (privdata_ptr->virtual_length % TTY_TABSTOP_WIDTH);
 
-		tty_wrap_console_use_size (this, size);
-		vga_cursor_set (this->position.x, this->position.y);
+			for (i = 0; next_stop > i; ++i) {
+				entry = vga_text_mkentry (' ', privdata_ptr->vga_color);
+				vga_text_put_entry (entry, this->position.x, this->position.y);
 
-		return;
+				this->position.x += 1;
+
+				tty_wrap_console_use_size (this, size);
+			}
+
+			privdata_ptr->virtual_length += next_stop;
+			break;
+		default:
+			entry = vga_text_mkentry (c, privdata_ptr->vga_color);
+			vga_text_put_entry (entry, this->position.x, this->position.y);
+
+			this->position.x += 1;
+
+			privdata_ptr->virtual_length += 1;
 	}
 
-	vga_text_entry_t entry = vga_text_mkentry (c, privdata_ptr->vga_color);
-
-	vga_text_put_entry (entry, this->position.x, this->position.y);
-
-	privdata_ptr->virtual_length += 1;
-
-	this->position.x += 1;
-
-	if (this->position.x >= size.width) {
-		this->position.y += 1;
-
-		tty_wrap_console_use_size (this, size);
-	}
-
+	tty_wrap_console_use_size (this, size);
 	vga_cursor_set (this->position.x, this->position.y);
 }
 

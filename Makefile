@@ -50,6 +50,11 @@ objects_drivers := $(objects_drivers_video) $(objects_drivers_tty)
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
+objects_mm :=
+ifeq (x86,$(ARCH))
+objects_mm := $(objects_mm) kernel/arch/$(ARCH)/mm/gdt.o
+endif
+
 # libk string objects
 objects_libk_string := memchr.o memcpy.o strcat.o strlen.o
 objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
@@ -67,7 +72,7 @@ libk := $(addprefix libk/,$(libk))
 
 # Objects based on build tasks.
 asm_source_objects := $(object_start) $(objects_source_crt)
-c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(objects_libk)
+c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(objects_mm) $(objects_libk)
 
 # Object dirs
 all_objects := $(objects_bin_crt) $(asm_source_objects) $(c_source_objects)
@@ -93,7 +98,7 @@ objects_begin_crt := crti.o crtbegin.o
 objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 
 # Kernel objects.
-objects_kernel := $(object_main) $(objects_drivers) $(objects_kprint)
+objects_kernel := $(object_main) $(objects_drivers) $(objects_mm) $(objects_kprint)
 
 # Libraries to link to.
 libs := \
@@ -168,6 +173,7 @@ all: izix.kernel
 # All our included dependancies.
 include $(wildcard kernel/arch/$(ARCH)/boot/*.d)
 include $(wildcard kernel/arch/$(ARCH)/crt/*.d)
+include $(wildcard kernel/arch/$(ARCH)/mm/*.d)
 include $(wildcard kernel/boot/*.d)
 include $(wildcard kernel/drivers/video/*.d)
 include $(wildcard kernel/drivers/tty/*.d)

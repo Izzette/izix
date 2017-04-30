@@ -18,8 +18,10 @@ bool tty_wrap_console_use_size (
 		tty_driver_t *driver,
 		tty_size_t size
 ) {
-	if (driver->position.x >= size.width)
+	if (driver->position.x >= size.width) {
 		driver->position.x = 0;
+		driver->position.y += 1;
+	}
 
 	if (driver->position.y >= size.height) {
 		driver->position.y = 0;

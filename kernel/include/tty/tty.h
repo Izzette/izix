@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define TTY_TABSTOP_WIDTH 8
+
 typedef int tty_color_t;
 
 typedef struct tty_position_struct {

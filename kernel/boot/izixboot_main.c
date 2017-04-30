@@ -5,22 +5,19 @@
 
 #include <izixboot/memmap.h>
 #include <izixboot/gdt.h>
-#include <izixboot/gdt32.h>
-
-#include <string.h>
-#include <format.h>
 
 #include <tty/tty_driver.h>
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
+#include <mm/gdt.h>
 
 __attribute__((force_align_arg_pointer))
-void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, const uint32_t gdtr_u32) {
+void kernel_main (uint32_t entry_count_u32, uint32_t entries_u32, uint32_t gdtr_u32) {
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-	const e820_3x_entry_t *entries = (e820_3x_entry_t *)entries_u32;
-	const gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
+	e820_3x_entry_t *entries = (e820_3x_entry_t *)entries_u32;
+	gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
 #pragma GCC diagnostic pop
-	const size_t entry_count = (size_t)entry_count_u32;
+	size_t entry_count = (size_t)entry_count_u32;
 
 	size_t i;
 
@@ -81,6 +78,9 @@ void kernel_main (const uint32_t entry_count_u32, const uint32_t entries_u32, co
 
 		kprintf ("BIOS-e820: [mem 0x%016x-0x%016x] %s%s\n", base, end, type, xattr);
 	}
+
+	gdt_register (gdtr);
+	gdt_dump_entries ();
 
 	tty_driver_vga_text.release (&tty_driver_vga_text);
 }
