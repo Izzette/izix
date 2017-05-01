@@ -30,7 +30,9 @@ static inline void print_logical_gdtr (gdt32_logical_register_t logical_registry
 }
 
 static inline void print_logical_entry (gdt32_logical_entry_t logical_entry) {
-	kprintf ("mm/gdt: limit=0x%05x base=%p\n", logical_entry.limit, logical_entry.base);
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+	kprintf ("mm/gdt: limit=0x%05x base=%p\n", logical_entry.limit, (void *)logical_entry.base);
+#pragma GCC diagnostic pop
 	kprintf ("\taccess: %s %s %s %s %d %s\n",
 		logical_entry.access.accessed             ? "AC" : "--",
 		logical_entry.access.read_write           ? "RW" : "--",
@@ -56,7 +58,7 @@ void gdt_dump_entries () {
 	kputs ("mm/gdt: GDT registry:\n");
 	print_logical_gdtr (logical_registry);
 
-	kprintf ("mm/gdt: GDT entries:\n", logical_registry.size);
+	kprintf ("mm/gdt: GDT entries %d:\n", logical_registry.size);
 
 	// Skip the first entry because it is the obligitory NULL entry.
 	for (i = 0; logical_registry.size > i; ++i) {

@@ -36,8 +36,10 @@ static inline char *itoa (int value, char *result, int base) {
 }
 #endif
 
-int sprintf (char *, const char *, ...);
-int vsprintf (char *, const char *, va_list);
+int sprintf (char *, const char *, ...)
+	__attribute__ ((format (printf, 2, 3)));
+int vsprintf (char *, const char *, va_list)
+	__attribute__ ((format (printf, 2, 0)));
 
 #endif
 

@@ -141,7 +141,8 @@ CFLAGS := \
 	-I./kernel/include \
 	-I./kernel/arch/$(ARCH)/include \
 	-I./libk/include \
-	-ffreestanding
+	-ffreestanding \
+	-Werror=format
 
 # Our assembling flags.
 ASFLAGS ?= \
