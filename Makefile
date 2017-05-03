@@ -63,8 +63,11 @@ objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
 objects_libk_format := pad.o itoa.o sprintf.o
 objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
 
+objects_libk_collections := bintree.o
+objects_libk_collections := $(addprefix libk/collections/,$(objects_libk_collections))
+
 # All Libk format objects
-objects_libk := $(objects_libk_string) $(objects_libk_format)
+objects_libk := $(objects_libk_string) $(objects_libk_format) $(objects_libk_collections)
 
 # Libk library
 libk := libk.a
