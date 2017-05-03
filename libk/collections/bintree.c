@@ -1,107 +1,10 @@
 // libk/collections/bintree.c
 
+#include <stddef.h>
+
 #include <collections.h>
 
-static inline void remove_node_zero (bintree_t *tree, bintree_node_t *node) {
-	if (node == tree->root)
-		tree->root = NULL;
-	else if (node == node->parent->high)
-		node->parent->high = NULL;
-	else
-		node->parent->low = NULL;
-
-	node->parent = NULL;
-}
-
-static inline void remove_node_one (bintree_t *tree, bintree_node_t *node) {
-	bintree_node_t *replacement;
-
-	if (node->low) {
-		replacement = node->low;
-		node->low = NULL;
-	} else {
-		replacement = node->high;
-		node->high = NULL;
-	}
-
-	if (node == tree->root)
-		tree->root = replacement;
-	else if (node == node->parent->high)
-		node->parent->high = replacement;
-	else
-		node->parent->low = replacement;
-
-	replacement->parent = node->parent;
-
-	node->parent = NULL;
-}
-
-static inline void remove_node_two (bintree_t *tree, bintree_node_t *node) {
-	bintree_node_t *replacement;
-
-	if (tree->last_rm)
-		replacement = bintree_sub_max (node->low);
-	else
-		replacement = bintree_sub_min (node->high);
-
-	tree->last_rm = (tree->last_rm + 1) % 2;
-
-	// "replacment" is guerenteed to have zero or one children.
-	bintree_remove_node (tree, replacement);
-
-	if (node == tree->root)
-		tree->root = replacement;
-	else if (node == node->parent->high)
-		node->parent->high = replacement;
-	else
-		node->parent->low = replacement;
-
-	replacement->high = node->high;
-	replacement->low = node->low;
-	replacement->parent = node->parent;
-
-	node->high = NULL;
-	node->low = NULL;
-	node->parent = NULL;
-}
-
-bintree_t new_bintree () {
-	bintree_t tree = {
-		.root = NULL,
-		.last_rm = 0
-	};
-
-	return tree;
-}
-
-bintree_node_t new_bintree_node (void *data) {
-	bintree_node_t node = {
-		.low = NULL,
-		.high = NULL,
-		.parent = NULL,
-		.data = data
-	};
-
-	return node;
-}
-
-#define MKBINTREE_SUB_HILO(suffix, link) \
-bintree_node_t *bintree_sub_##suffix (bintree_node_t *node) { \
-	while (node->link) \
-		node = node->link; \
-\
-	return node; \
-} \
-\
-bintree_node_t *bintree_##suffix (bintree_t *tree) { \
-	if (!tree->root) \
-		return NULL; \
-\
-	return bintree_sub_##suffix (tree->root); \
-}
-
-MKBINTREE_SUB_HILO(min, low);
-MKBINTREE_SUB_HILO(max, high);
+#include <mm/freemem.h>
 
 #define MKBINTREE_NODE_ADJACENT(suffix, hilo, cmp, link) \
 bintree_node_t *bintree_node_##suffix (bintree_node_t *node) { \
@@ -160,33 +63,70 @@ bintree_node_t *bintree_insert (bintree_t *tree, bintree_node_t *node) {
 	return NULL;
 }
 
-void bintree_remove_node (bintree_t *tree, bintree_node_t *node) {
-	const unsigned char children_count =
-		(node->low  ? 1 : 0) +
-		(node->high ? 1 : 0);
+void bintree_remove_node_zero (bintree_t *tree, bintree_node_t *node) {
+	if (node == tree->root)
+		tree->root = NULL;
+	else if (node == node->parent->high)
+		node->parent->high = NULL;
+	else
+		node->parent->low = NULL;
 
-	switch (children_count) {
-		case 0:
-			remove_node_zero (tree, node);
-			break;
-		case 1:
-			remove_node_one (tree, node);
-			break;
-		case 2:
-			remove_node_two (tree, node);
-			break;
-	}
+	node->parent = NULL;
 }
 
-bintree_node_t *bintree_remove (bintree_t *tree, size_t orderby) {
-	bintree_node_t *node = bintree_search (tree, orderby);
+void bintree_remove_node_one (bintree_t *tree, bintree_node_t *node) {
+	bintree_node_t *replacement;
 
-	if (!node || orderby != node->orderby)
-		return NULL;
+	if (node->low) {
+		replacement = node->low;
+		node->low = NULL;
+	} else {
+		replacement = node->high;
+		node->high = NULL;
+	}
 
-	bintree_remove_node (tree, node);
+	if (node == tree->root)
+		tree->root = replacement;
+	else if (node == node->parent->high)
+		node->parent->high = replacement;
+	else
+		node->parent->low = replacement;
 
-	return node;
+	replacement->parent = node->parent;
+
+	node->parent = NULL;
+}
+
+void bintree_remove_node_two (bintree_t *tree, bintree_node_t *node) {
+	bintree_node_t *replacement;
+
+	if (tree->last_rm)
+		replacement = bintree_sub_max (node->low);
+	else
+		replacement = bintree_sub_min (node->high);
+
+	tree->last_rm = (tree->last_rm + 1) % 2;
+
+	// "replacment" is guerenteed to have zero or one children.
+	if (!replacement->low && !replacement->high)
+		bintree_remove_node_zero (tree, replacement);
+	else
+		bintree_remove_node_one (tree, replacement);
+
+	if (node == tree->root)
+		tree->root = replacement;
+	else if (node == node->parent->high)
+		node->parent->high = replacement;
+	else
+		node->parent->low = replacement;
+
+	replacement->high = node->high;
+	replacement->low = node->low;
+	replacement->parent = node->parent;
+
+	node->high = NULL;
+	node->low = NULL;
+	node->parent = NULL;
 }
 
 // vim: set ts=4 sw=4 noet syn=c:
