@@ -41,7 +41,7 @@ bintree_node_t *bintree_search (bintree_t *tree, size_t orderby) {
 	return NULL;
 }
 
-bintree_node_t *bintree_insert (bintree_t *tree, bintree_node_t *node) {
+bintree_node_t *bintree_insert_node (bintree_t *tree, bintree_node_t *node) {
 	bintree_node_t *parent = bintree_search (tree, node->orderby);
 
 	if (!parent) {

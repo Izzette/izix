@@ -9,6 +9,7 @@
 
 void e820_register (size_t entry_count, e820_3x_entry_t *entries);
 void e820_dump_entries ();
+void e820_add_freemem ();
 
 #endif
 

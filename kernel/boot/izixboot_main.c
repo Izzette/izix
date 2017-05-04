@@ -9,6 +9,7 @@
 #include <tty/tty_driver.h>
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
+#include <mm/freemem.h>
 #include <mm/gdt.h>
 #include <mm/e820.h>
 
@@ -41,6 +42,9 @@ void kernel_main (
 
 	e820_register (e820_entry_count, e820_entries);
 	e820_dump_entries ();
+
+	freemem_init ((void *)0x18e00, 0x1000);
+	e820_add_freemem ();
 
 	gdt_register (gdtr);
 	gdt_dump_entries ();

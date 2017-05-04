@@ -79,7 +79,7 @@ bintree_node_t *bintree_search (bintree_t *, size_t);
 
 // Returns NULL if node inserted successfully,
 // otherwise returns node with conflicting .orderby field.
-bintree_node_t *bintree_insert (bintree_t *, bintree_node_t *);
+bintree_node_t *bintree_insert_node (bintree_t *, bintree_node_t *);
 
 void bintree_remove_node_zero (bintree_t *, bintree_node_t *);
 void bintree_remove_node_one (bintree_t *, bintree_node_t *);
@@ -115,7 +115,6 @@ static inline bintree_node_t *bintree_remove (bintree_t *tree, size_t orderby) {
 
 	return node;
 }
-
 
 #endif
 

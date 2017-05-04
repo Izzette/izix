@@ -5,6 +5,7 @@
 #include <izixboot/memmap.h>
 
 #include <kprint/kprint.h>
+#include <mm/freemem.h>
 
 static size_t e820_entry_count;
 static e820_3x_entry_t *e820_entries;
@@ -58,6 +59,23 @@ void e820_dump_entries () {
 
 	for (i = 0; e820_entry_count > i; ++i)
 		print_entry (e820_entries[i]);
+}
+
+void e820_add_freemem () {
+	size_t i;
+
+	for (i = 0; e820_entry_count > i; ++i) {
+		if (E820_TYPE_USABLE == e820_entries[i].type) {
+			e820_3x_entry_t entry = e820_entries[i];
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+			void *p = (void *)entry.base;
+#pragma GCC diagnostic pop
+			size_t length = entry.length;
+			freemem_region_t region = new_freemem_region (p, length);
+
+			freemem_add_region (region);
+		}
+	}
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

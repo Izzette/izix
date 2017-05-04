@@ -50,9 +50,13 @@ objects_drivers := $(objects_drivers_video) $(objects_drivers_tty)
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
-objects_mm :=
+objects_mm := freemem.o
+objects_mm := $(addprefix kernel/mm/,$(objects_mm))
+
 ifeq (x86,$(ARCH))
-objects_mm := $(objects_mm) kernel/arch/$(ARCH)/mm/gdt.o kernel/arch/$(ARCH)/mm/e820.o
+objects_x86_mm := gdt.o e820.o
+objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
+objects_mm := $(objects_mm) $(objects_x86_mm)
 endif
 
 # libk string objects
