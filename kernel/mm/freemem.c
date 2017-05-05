@@ -17,17 +17,16 @@ static freemem_entry_t *freemem_entries;
 static size_t freemem_entry_max_length;
 static size_t freemem_entry_count = 0;
 
-static inline freemem_entry_t new_freemem_entry (freemem_region_t region) {
+static inline freemem_entry_t new_freemem_entry (
+		freemem_region_t region,
+		bintree_node_t node_base
+) {
 	freemem_entry_t entry = {
 		.region = region,
-		.node_base = new_bintree_node (0, 0)
+		.node_base = node_base
 	};
 
 	return entry;
-}
-
-static inline bintree_node_t *freemem_get_node (freemem_entry_t *entry) {
-	return &entry->node_base;
 }
 
 static inline freemem_entry_t *freemem_get_last_entry () {
@@ -36,6 +35,14 @@ static inline freemem_entry_t *freemem_get_last_entry () {
 
 static inline bool freemem_is_last_entry (freemem_entry_t *entry) {
 	return entry == freemem_get_last_entry ();
+}
+
+static inline bintree_node_t *freemem_get_node (freemem_entry_t *entry) {
+	return &entry->node_base;
+}
+
+static inline freemem_entry_t *freemem_get_node_data (bintree_node_t *node) {
+	return (freemem_entry_t *)node->data;
 }
 
 static inline void freemem_fix_entry (freemem_entry_t *entry) {
@@ -57,43 +64,12 @@ static inline void freemem_move_entry (
 	// Fix the moved entry.
 	freemem_fix_entry (new_location);
 	// Then insert it back into the tree.
+	// TODO: panic if error.
 	bintree_insert_node (freemem_tree, freemem_get_node (new_location));
 }
 
 static inline void freemem_move_last_entry (freemem_entry_t *new_location) {
 	freemem_move_entry (freemem_get_last_entry (), new_location);
-}
-
-static inline bool freemem_consecutive_regions (
-		freemem_region_t region1,
-		freemem_region_t region2
-) {
-	freemem_region_t low_region, high_region;
-
-	if (region1.p < region2.p) {
-		low_region = region1;
-		high_region = region2;
-	} else {
-		low_region = region2;
-		high_region = region1;
-	}
-
-	return high_region.p == low_region.p + low_region.length;
-}
-
-static inline freemem_region_t freemem_join_regions (
-		freemem_region_t region1,
-		freemem_region_t region2
-) {
-	void *new_p = (region1.p < region2.p) ? region1.p : region2.p;
-	const size_t new_length = region1.length + region2.length;
-
-	freemem_region_t joined_region = {
-		.p = new_p,
-		.length = new_length
-	};
-
-	return joined_region;
 }
 
 static inline freemem_entry_t *freemem_join_entries (
@@ -138,7 +114,7 @@ static inline freemem_entry_t *freemem_join_entries (
 	*new_region = joined_region;
 	*new_node = new_bintree_node ((size_t)new_region->p, new_entry);
 
-	bintree_insert_node (freemem_tree, new_node);
+	bintree_insert_node (freemem_tree, new_node); // TODO: panic if error.
 
 	return new_entry;
 }
@@ -197,11 +173,7 @@ bool freemem_add_region (freemem_region_t region) {
 	freemem_entry_t *entry = freemem_entries + freemem_entry_count;
 
 	bintree_node_t node_base = new_bintree_node ((size_t)region.p, entry);
-
-	freemem_entry_t entry_base = {
-		.region = region,
-		.node_base = node_base
-	};
+	freemem_entry_t entry_base = new_freemem_entry (region, node_base);
 
 	*entry = entry_base;
 
@@ -217,6 +189,79 @@ bool freemem_add_region (freemem_region_t region) {
 	freemem_entry_count += 1;
 
 	freemem_defrag_entry (entry);
+
+	return true;
+}
+
+bool freemem_remove_region (freemem_region_t region) {
+	if (0 == freemem_entry_count)
+		return false;
+
+	// Parent is guaranteed to be non-NULL because freemem_entry_count is non-zero.
+	bintree_node_t *parent = bintree_search (freemem_tree, (size_t)region.p);
+	freemem_region_t parent_region = freemem_get_node_data (parent)->region;
+
+	if (region.p < parent_region.p) do {
+		parent_region = freemem_get_node_data (parent)->region;
+
+		if (region.p >= parent_region.p)
+			break;
+
+		parent = bintree_node_prev (parent);
+	} while (parent); else do {
+		parent_region = freemem_get_node_data (parent)->region;
+
+		if (freemem_get_region_end (region) <= freemem_get_region_end (parent_region))
+			break;
+
+		parent = bintree_node_next (parent);
+	} while (parent);
+
+	if (!parent)
+		return false;
+
+	if (!freemem_region_subset (parent_region, region))
+		return false;
+
+	bintree_node_t *superset_node;
+	freemem_entry_t *superset_entry;
+	void *region_p, *superset_region_p;
+	void *region_end, *superset_region_end;
+
+	superset_node = parent;
+
+	superset_entry = freemem_get_node_data (superset_node);
+
+	region_p = region.p;
+	superset_region_p = parent_region.p;
+
+	region_end = freemem_get_region_end (region);
+	superset_region_end = freemem_get_region_end (parent_region);
+
+	unsigned char region_facts =
+		(region_p   == superset_region_p   ? 1 : 0) |
+		(region_end == superset_region_end ? 1 : 0) << 1;
+
+	switch (region_facts) {
+		case 0b00: // region shares no edges with superset.
+			superset_entry->region.length = region.p - superset_entry->region.p;
+			freemem_add_region ( // TODO: panic if error.
+				new_freemem_region (
+					region_end, (size_t)(superset_region_end - region_end)));
+			break;
+		case 0b01: // region shares the start with superset region.
+			bintree_remove_node (freemem_tree, superset_node);
+			superset_entry->region.p += region.length;
+			superset_entry->region.length -= region.length;
+			superset_node->orderby = (size_t)superset_entry->region.p;
+			bintree_insert_node (freemem_tree, superset_node); // TODO: panic if error.
+			break;
+		case 0b10: // region shares the end with superset region.
+			superset_entry->region.length -= region.length;
+			break;
+		default: // region is superset region.
+			bintree_remove_node (freemem_tree, parent);
+	}
 
 	return true;
 }
