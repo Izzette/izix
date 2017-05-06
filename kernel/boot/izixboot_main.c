@@ -9,6 +9,7 @@
 #include <tty/tty_driver.h>
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
+#include <mm/freemem.h>
 #include <mm/gdt.h>
 #include <mm/e820.h>
 
@@ -41,6 +42,27 @@ void kernel_main (
 
 	e820_register (e820_entry_count, e820_entries);
 	e820_dump_entries ();
+
+	freemem_region_t kernel_region, stack_region, freemem_internal_region;
+
+	// TODO: get the actually start and length of the kernel.
+	kernel_region = new_freemem_region (
+		(void *)0x8000,
+		(size_t)(512 * 127));
+	stack_region = new_freemem_region (
+		(void *)0x0,
+		(size_t)kernel_region.p);
+	freemem_internal_region = new_freemem_region (
+		freemem_get_region_end (kernel_region), // Exclusive max.
+		(size_t)0x1000);
+
+	freemem_init (freemem_internal_region.p, freemem_internal_region.length);
+
+	e820_add_freemem ();
+
+	freemem_remove_region (freemem_internal_region);
+	freemem_remove_region (stack_region);
+	freemem_remove_region (kernel_region);
 
 	gdt_register (gdtr);
 	gdt_dump_entries ();

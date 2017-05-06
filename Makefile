@@ -50,9 +50,13 @@ objects_drivers := $(objects_drivers_video) $(objects_drivers_tty)
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
-objects_mm :=
+objects_mm := freemem.o malloc.o
+objects_mm := $(addprefix kernel/mm/,$(objects_mm))
+
 ifeq (x86,$(ARCH))
-objects_mm := $(objects_mm) kernel/arch/$(ARCH)/mm/gdt.o kernel/arch/$(ARCH)/mm/e820.o
+objects_x86_mm := gdt.o e820.o
+objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
+objects_mm := $(objects_mm) $(objects_x86_mm)
 endif
 
 # libk string objects
@@ -63,8 +67,11 @@ objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
 objects_libk_format := pad.o itoa.o sprintf.o
 objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
 
+objects_libk_collections := bintree.o
+objects_libk_collections := $(addprefix libk/collections/,$(objects_libk_collections))
+
 # All Libk format objects
-objects_libk := $(objects_libk_string) $(objects_libk_format)
+objects_libk := $(objects_libk_string) $(objects_libk_format) $(objects_libk_collections)
 
 # Libk library
 libk := libk.a
