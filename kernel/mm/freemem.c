@@ -76,10 +76,6 @@ static inline freemem_entry_t *freemem_join_entries (
 		freemem_entry_t *entry1,
 		freemem_entry_t *entry2
 ) {
-
-	// We will be removing two then inserting one, so our count decrements by one.
-	freemem_entry_count -= 1;
-
 	freemem_region_t joined_region =
 		freemem_join_regions (entry1->region, entry2->region);
 
@@ -115,6 +111,9 @@ static inline freemem_entry_t *freemem_join_entries (
 	*new_node = new_bintree_node ((size_t)new_region->p, new_entry);
 
 	bintree_insert_node (freemem_tree, new_node); // TODO: panic if error.
+
+	// We have removed two then inserting one, so our count decrements by one.
+	freemem_entry_count -= 1;
 
 	return new_entry;
 }
@@ -264,6 +263,36 @@ bool freemem_remove_region (freemem_region_t region) {
 	}
 
 	return true;
+}
+
+freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
+	size_t i;
+
+	for (i = freemem_entry_count - 1; 0 != i; --i) {
+		size_t align_inc;
+
+		if ((size_t)freemem_entries[i].region.p % alignment)
+			align_inc = alignment - (size_t)freemem_entries[i].region.p % alignment;
+		else
+			align_inc = 0;
+
+		if (0 <= offset) {
+			align_inc += offset;
+		} else {
+			if ((size_t)(-1 * offset) > align_inc)
+				align_inc += alignment;
+			align_inc -= -1 * offset;
+		}
+
+		if (length + align_inc > freemem_entries[i].region.length)
+			continue;
+
+		return new_freemem_region (
+			freemem_entries[i].region.p + align_inc,
+			length);
+	}
+
+	return new_freemem_region ((void *)0x0, 0);
 }
 
 // vim: set ts=4 sw=4 noet syn=c:
