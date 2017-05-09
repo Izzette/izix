@@ -59,8 +59,17 @@ objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
 objects_mm := $(objects_mm) $(objects_x86_mm)
 endif
 
+objects_sched :=
+objects_sched := $(addprefix kernel/sched/,$(objects_sched))
+
+ifeq (x86,$(ARCH))
+objects_x86_sched := tss.o
+objects_x86_sched := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched))
+objects_sched := $(objects_sched) $(objects_x86_sched)
+endif
+
 # libk string objects
-objects_libk_string := memchr.o memcpy.o strcat.o strlen.o
+objects_libk_string := memchr.o memcpy.o memset.o strcat.o strlen.o
 objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
 
 # libk format objects
@@ -79,7 +88,7 @@ libk := $(addprefix libk/,$(libk))
 
 # Objects based on build tasks.
 asm_source_objects := $(object_start) $(objects_source_crt)
-c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(objects_mm) $(objects_libk)
+c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(objects_mm) $(objects_sched) $(objects_libk)
 
 # Object dirs
 all_objects := $(objects_bin_crt) $(asm_source_objects) $(c_source_objects)
@@ -106,7 +115,7 @@ objects_begin_crt := crti.o crtbegin.o
 objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 
 # Kernel objects.
-objects_kernel := $(object_main) $(objects_drivers) $(objects_mm) $(objects_kprint)
+objects_kernel := $(object_main) $(objects_drivers) $(objects_mm) $(objects_sched) $(objects_kprint)
 
 # Libraries to link to.
 libs := \

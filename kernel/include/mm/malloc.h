@@ -9,6 +9,8 @@
 
 void *malloc (size_t)
 	__attribute__((malloc));
+void *realloc (void *, size_t)
+	__attribute__((malloc));
 void free (void *);
 
 #endif

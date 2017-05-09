@@ -10,6 +10,8 @@ const void *memchr (const void *, int, size_t);
 void *memcpy (void *restrict, const void *, size_t);
 void *memccpy (void *restrict, const void *, int, size_t);
 
+void *memset (void *s, int c, size_t n);
+
 char *strcat (char *restrict, const char *restrict);
 char *strncat (char *restrict, const char *restrict, size_t);
 
