@@ -13,6 +13,15 @@
 #include <mm/gdt.h>
 #include <mm/e820.h>
 #include <sched/tss.h>
+#include <int/idt.h>
+#include <irq/irq_vectors.h>
+#include <isr/isr.h>
+#include <pic_8259/pic_8259.h>
+
+static void __attribute__((noinline)) main_loop () {
+	for (;;)
+		asm ("hlt;\n");
+}
 
 __attribute__((force_align_arg_pointer))
 void kernel_main (
@@ -79,6 +88,20 @@ void kernel_main (
 	gdt_dump_entries ();
 
 	tss_load (tss_segment);
+
+	idt_init ();
+
+	idt_set_isr (IDT_NP_VECTOR, isr_np);
+	idt_set_isr (IDT_GP_VECTOR, isr_gp);
+	idt_set_isr (IDT_DF_VECTOR, isr_df);
+
+	pic_8259_reinit ();
+
+	idt_load ();
+
+	asm ("sti;\n");
+
+	main_loop ();
 
 	tty_driver_vga_text.release (&tty_driver_vga_text);
 }

@@ -46,6 +46,13 @@ objects_drivers_tty := $(addprefix kernel/drivers/tty/,$(objects_drivers_tty))
 # All of our drivers.
 objects_drivers := $(objects_drivers_video) $(objects_drivers_tty)
 
+ifeq (x86,$(ARCH))
+objects_drivers_x86_pic_8259 := pic_8259.o
+objects_drivers_x86_pic_8259 := \
+	$(addprefix kernel/arch/$(ARCH)/drivers/pic_8259/,$(objects_drivers_x86_pic_8259))
+objects_drivers := $(objects_drivers) $(objects_drivers_x86_pic_8259)
+endif
+
 # Our kprint subsystem.
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
@@ -68,6 +75,24 @@ objects_x86_sched := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched)
 objects_sched := $(objects_sched) $(objects_x86_sched)
 endif
 
+objects_int :=
+objects_int := $(addprefix kernel/int/,$(objects_int))
+
+ifeq (x86,$(ARCH))
+objects_x86_int := idt.o int_selector_ec.o
+objects_x86_int := $(addprefix kernel/arch/$(ARCH)/int/,$(objects_x86_int))
+objects_int := $(objects_int) $(objects_x86_int)
+endif
+
+objects_isr :=
+objects_isr := $(addprefix kernel/isr/,$(objects_isr))
+
+ifeq (x86,$(ARCH))
+objects_x86_isr := df.o np.o gp.o
+objects_x86_isr := $(addprefix kernel/arch/$(ARCH)/isr/,$(objects_x86_isr))
+objects_isr := $(objects_isr) $(objects_x86_isr)
+endif
+
 # libk string objects
 objects_libk_string := memchr.o memcpy.o memset.o strcat.o strlen.o
 objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
@@ -87,8 +112,18 @@ libk := libk.a
 libk := $(addprefix libk/,$(libk))
 
 # Objects based on build tasks.
-asm_source_objects := $(object_start) $(objects_source_crt)
-c_source_objects := $(object_main) $(objects_drivers) $(objects_kprint) $(objects_mm) $(objects_sched) $(objects_libk)
+asm_source_objects := \
+	$(object_start) \
+	$(objects_source_crt) \
+	$(objects_isr)
+c_source_objects := \
+	$(object_main) \
+	$(objects_drivers) \
+	$(objects_kprint) \
+	$(objects_mm) \
+	$(objects_sched) \
+	$(objects_int) \
+	$(objects_libk)
 
 # Object dirs
 all_objects := $(objects_bin_crt) $(asm_source_objects) $(c_source_objects)
@@ -115,7 +150,14 @@ objects_begin_crt := crti.o crtbegin.o
 objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 
 # Kernel objects.
-objects_kernel := $(object_main) $(objects_drivers) $(objects_mm) $(objects_sched) $(objects_kprint)
+objects_kernel := \
+	$(object_main) \
+	$(objects_drivers) \
+	$(objects_mm) \
+	$(objects_sched) \
+	$(objects_int) \
+	$(objects_isr) \
+	$(objects_kprint)
 
 # Libraries to link to.
 libs := \

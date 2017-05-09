@@ -7,6 +7,7 @@
 
 #include <string.h>
 
+// TODO: Fix cyclic dependencies.
 typedef struct tss_struct tss_t;
 
 #include <mm/gdt.h>

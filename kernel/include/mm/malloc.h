@@ -3,6 +3,7 @@
 #ifndef IZIX_MALLOC_H
 #define IZIX_MALLOC_H 1
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define MALLOC_ALIGNMENT sizeof(intmax_t)

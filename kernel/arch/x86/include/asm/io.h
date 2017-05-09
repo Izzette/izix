@@ -59,7 +59,7 @@ static inline void native_io_delay () {
 	asm volatile ("outb %al, $0x80");
 }
 
-static inline void slow_down_io () {
+static inline void io_wait () {
 	native_io_delay();
 #ifdef REALLY_SLOW_IO
 	native_io_delay();
@@ -85,12 +85,12 @@ static inline unsigned type in##bwl (int port) { \
 \
 static inline void out##bwl##_p (unsigned type value, int port) { \
 	out##bwl (value, port); \
-	slow_down_io (); \
+	io_wait (); \
 } \
 \
 static inline unsigned type in##bwl##_p (int port) { \
 	unsigned type value = in##bwl (port); \
-	slow_down_io (); \
+	io_wait (); \
 	return value; \
 } \
 \
