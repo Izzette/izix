@@ -206,7 +206,7 @@ OBJCOPY ?= objcopy
 CFLAGS ?= \
 	-O2 -Wall -Wextra
 CFLAGS := \
-	$(CFLAGS) -DIZIX \
+	$(CFLAGS) \
 	-I./kernel/include \
 	-I./kernel/arch/$(ARCH)/include \
 	-I./libk/include \
@@ -216,25 +216,20 @@ CFLAGS := \
 # Our assembling flags.
 ASFLAGS ?= \
 	-Wall -Wextra
-ASFLAGS := \
-	$(ASFLAGS) -DIZIX \
-	-Wa,-I./kernel/arch/$(ARCH)/include
 
 # Our linker flags.
 LDFLAGS := \
 	-L./libk \
-	-Wl,-T$(linker_script)
+	-Wl,-T./$(linker_script)
 
 STRIPFLAGS ?= \
 	--remove-section=.note.gnu.gold-version \
 	--remove-section=.comment \
 	--remove-section=.note \
 	--remove-section=.note.gnu.build-id \
-	--remove-section=.note.ABI-tag
-STRIPFLAGS := \
+	--remove-section=.note.ABI-tag \
 	--strip-all \
-	--strip-unneeded \
-	$(STRIPFLAGS)
+	--strip-unneeded
 
 # Bootloader specific flags.
 ifeq (izixboot,$(BOOTLOADER))
@@ -259,7 +254,7 @@ all: izix.kernel
 include $(wildcard $(addsuffix /*.d,$(all_object_dirs)))
 
 $(asm_source_objects):%.o:%.s
-	$(CC) $(ASFLAGS) -Wa,-I$(dir $<) -c $< -o $@
+	$(CC) $(ASFLAGS) -Wa,-I./$(dir $<) -c $< -o $@
 
 $(c_source_objects):%.o:%.c
 	$(CC) $(CFLAGS) -c $< -o $@
