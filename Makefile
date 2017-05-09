@@ -88,9 +88,18 @@ objects_isr :=
 objects_isr := $(addprefix kernel/isr/,$(objects_isr))
 
 ifeq (x86,$(ARCH))
-objects_x86_isr := df.o np.o gp.o
+objects_x86_isr := df.o np.o gp.o irq.o
 objects_x86_isr := $(addprefix kernel/arch/$(ARCH)/isr/,$(objects_x86_isr))
 objects_isr := $(objects_isr) $(objects_x86_isr)
+endif
+
+objects_irq :=
+objects_irq := $(addprefix kernel/irq/,$(objects_irq))
+
+ifeq (x86,$(ARCH))
+objects_x86_irq := irq.o
+objects_x86_irq := $(addprefix kernel/arch/$(ARCH)/irq/,$(objects_x86_irq))
+objects_irq := $(objects_irq) $(objects_x86_irq)
 endif
 
 # libk string objects
@@ -123,6 +132,7 @@ c_source_objects := \
 	$(objects_mm) \
 	$(objects_sched) \
 	$(objects_int) \
+	$(objects_irq) \
 	$(objects_libk)
 
 # Object dirs
@@ -157,6 +167,7 @@ objects_kernel := \
 	$(objects_sched) \
 	$(objects_int) \
 	$(objects_isr) \
+	$(objects_irq) \
 	$(objects_kprint)
 
 # Libraries to link to.
@@ -245,16 +256,10 @@ endif
 all: izix.kernel
 
 # All our included dependancies.
-include $(wildcard kernel/arch/$(ARCH)/boot/*.d)
-include $(wildcard kernel/arch/$(ARCH)/crt/*.d)
-include $(wildcard kernel/arch/$(ARCH)/mm/*.d)
-include $(wildcard kernel/boot/*.d)
-include $(wildcard kernel/drivers/video/*.d)
-include $(wildcard kernel/drivers/tty/*.d)
-include $(wildcard kernel/kprint/*.d)
+include $(wildcard $(addsuffix /*.d,$(all_object_dirs)))
 
 $(asm_source_objects):%.o:%.s
-	$(CC) $(ASFLAGS) -c $< -o $@
+	$(CC) $(ASFLAGS) -Wa,-I$(dir $<) -c $< -o $@
 
 $(c_source_objects):%.o:%.c
 	$(CC) $(CFLAGS) -c $< -o $@

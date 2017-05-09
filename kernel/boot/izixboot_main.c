@@ -95,6 +95,23 @@ void kernel_main (
 	idt_set_isr (IDT_GP_VECTOR, isr_gp);
 	idt_set_isr (IDT_DF_VECTOR, isr_df);
 
+	idt_set_isr (IRQ_VECTOR_IRQ0, isr_irq0);
+	// IRQ2 is used internally by 8259PIC.
+	idt_set_isr (IRQ_VECTOR_IRQ1, isr_irq1);
+	idt_set_isr (IRQ_VECTOR_IRQ3, isr_irq3);
+	idt_set_isr (IRQ_VECTOR_IRQ4, isr_irq4);
+	idt_set_isr (IRQ_VECTOR_IRQ5, isr_irq5);
+	idt_set_isr (IRQ_VECTOR_IRQ6, isr_irq6);
+	idt_set_isr (IRQ_VECTOR_IRQ7, isr_irq7);
+	idt_set_isr (IRQ_VECTOR_IRQ8, isr_irq8);
+	idt_set_isr (IRQ_VECTOR_IRQ9, isr_irq9);
+	idt_set_isr (IRQ_VECTOR_IRQ10, isr_irq10);
+	idt_set_isr (IRQ_VECTOR_IRQ11, isr_irq11);
+	idt_set_isr (IRQ_VECTOR_IRQ12, isr_irq12);
+	idt_set_isr (IRQ_VECTOR_IRQ13, isr_irq13);
+	idt_set_isr (IRQ_VECTOR_IRQ14, isr_irq14);
+	idt_set_isr (IRQ_VECTOR_IRQ15, isr_irq15);
+
 	pic_8259_reinit ();
 
 	idt_load ();

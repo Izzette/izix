@@ -5,6 +5,8 @@
 
 typedef unsigned char irq_t;
 
+void irq_handler (irq_t);
+
 #endif
 
 // vim: set ts=4 sw=4 noet syn=c:

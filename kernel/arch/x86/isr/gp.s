@@ -1,5 +1,7 @@
 // kernel/arch/x86/isr/gp.s
 
+.include	"save_state.s"
+
 .file		"gp.s"
 
 .code32
@@ -9,15 +11,15 @@
 	.globl	isr_gp
 	.type	isr_gp,		@function
 isr_gp:
-	// Error code.
-	popl	%eax
-
 	push	%ebp
 	mov	%esp,		%ebp
 
+	save_state
+
 	push	%ebx
 
-	mov	%eax,		%ebx
+// Error code
+	mov	0x4(%ebp),	%ebx
 
 	test	%ebx,		%ebx
 
@@ -41,6 +43,8 @@ isr_gp:
 
 .Lisr_gp_fin:
 	pop	%ebx
+
+	restore_state
 
 	mov	%ebp,		%esp
 	pop	%ebp

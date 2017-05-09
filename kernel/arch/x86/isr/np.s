@@ -1,5 +1,7 @@
 // kernel/arch/x86/isr/np.s
 
+.include	"save_state.s"
+
 .file		"np.s"
 
 .code32
@@ -9,15 +11,15 @@
 	.globl	isr_np
 	.type	isr_np,		@function
 isr_np:
-	// Error code.
-	popl	%eax
-
 	push	%ebp
 	mov	%esp,		%ebp
 
+	save_state
+
 	push	%ebx
 
-	mov	%eax,		%ebx
+// Error code
+	mov	0x4(%ebp),	%ebx
 
 	push	$isr_np_error_msg
 	call	kputs
@@ -28,6 +30,8 @@ isr_np:
 	add	$0x4,		%esp
 
 	pop	%ebx
+
+	restore_state
 
 	mov	%ebp,		%esp
 	pop	%ebp
