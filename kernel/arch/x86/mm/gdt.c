@@ -105,6 +105,7 @@ static inline segment_selector_t gdt_get_segment_selector (size_t i) {
 }
 
 static void __attribute__((noinline)) gdt_reload () {
+	// TODO: allow code segement selectors other than 0x08.
 	asm(
 		"	lgdt	(%0);\n"
 		"	ljmp	$0x08,		$gdt_reload_target;\n"
