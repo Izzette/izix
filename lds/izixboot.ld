@@ -18,17 +18,7 @@ SECTIONS
     .text BLOCK(4K) : ALIGN(4K)
     {
         *(.text)
-    }
-
-    /**
-     * Our initialization and finalization sections.
-     */
-    .init BLOCK(4K) : ALIGN(4K)
-    {
         *(.init)
-    }
-    .fini BLOCK(4K) : ALIGN(4K)
-    {
         *(.fini)
     }
 
@@ -36,12 +26,17 @@ SECTIONS
     .rodata BLOCK(4K) : ALIGN(4K)
     {
         *(.rodata)
+        *(.rodata.*)
+        *(.eh_frame)
     }
 
     /* Read-write data (initialized) */
     .data BLOCK(4K) : ALIGN(4K)
     {
         *(.data)
+        *(.ctors)
+        *(.dtors)
+        *(.jcr)
         *(COMMON)
         /* Kill the BSS section, since our bootloader doesn't initialize it. */
         *(.bss)
