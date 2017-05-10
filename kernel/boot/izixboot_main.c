@@ -12,6 +12,7 @@
 #include <mm/freemem.h>
 #include <mm/gdt.h>
 #include <mm/e820.h>
+#include <mm/paging.h>
 #include <sched/tss.h>
 #include <int/idt.h>
 #include <irq/irq_vectors.h>
@@ -115,6 +116,9 @@ void kernel_main (
 	pic_8259_reinit ();
 
 	idt_load ();
+
+	paging_init ();
+	paging_load ();
 
 	asm ("sti;\n");
 

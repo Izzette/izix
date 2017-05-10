@@ -61,7 +61,7 @@ objects_mm := freemem.o malloc.o
 objects_mm := $(addprefix kernel/mm/,$(objects_mm))
 
 ifeq (x86,$(ARCH))
-objects_x86_mm := gdt.o e820.o
+objects_x86_mm := gdt.o e820.o paging.o
 objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
 objects_mm := $(objects_mm) $(objects_x86_mm)
 endif

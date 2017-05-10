@@ -260,6 +260,8 @@ bool freemem_remove_region (freemem_region_t region) {
 			break;
 		default: // region is superset region.
 			bintree_remove_node (freemem_tree, parent);
+			freemem_move_last_entry (superset_entry);
+			freemem_entry_count -= 1;
 	}
 
 	return true;
