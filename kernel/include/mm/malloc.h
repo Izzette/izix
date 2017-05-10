@@ -4,9 +4,9 @@
 #define IZIX_MALLOC_H 1
 
 #include <stddef.h>
-#include <stdint.h>
+#include <stdalign.h>
 
-#define MALLOC_ALIGNMENT sizeof(intmax_t)
+#define MALLOC_ALIGNMENT alignof(max_align_t)
 
 void *malloc (size_t)
 	__attribute__((malloc));
