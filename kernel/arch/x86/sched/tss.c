@@ -1,6 +1,7 @@
 // kernel/arch/x86/sched/tss.c
 
 #include <kprint/kprint.h>
+#include <kpanic/kpanic.h>
 #include <sched/tss.h>
 #include <mm/gdt.h>
 #include <mm/malloc.h>
@@ -13,13 +14,19 @@ void tss_init (void *esp) {
 
 	tss_logical_t logical_tss = new_tss_logical ();
 
-	// TODO: panic if 0x00
 	logical_tss.ss0  = gdt_get_first_data_selector ();
 	logical_tss.esp0 = esp;
 	logical_tss.iopb = sizeof(tss_t);
+	if (!logical_tss.ss0) {
+		kputs ("sched/tss: Failed to retrieve a valid data segment selector!\n");
+		kpanic ();
+	}
 
-	// TODO: panic if NULL
 	tss_task_state_segment = malloc (sizeof(tss_t));
+	if (!tss_task_state_segment) {
+		kputs ("sched/tss: Failed to allocate TSS!\n");
+		kpanic ();
+	}
 
 	*tss_task_state_segment = tss_encode (logical_tss);
 }

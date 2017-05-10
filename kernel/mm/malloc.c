@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include <kpanic/kpanic.h>
+#include <kprint/kprint.h>
 #include <mm/freemem.h>
 #include <mm/malloc.h>
 
@@ -81,8 +83,13 @@ void *realloc (void *ptr, size_t size) {
 		freemem_region_t extra_region = new_freemem_region (
 				internal_ptr + extra_size, extra_size);
 
-		// TODO: panic on error
-		freemem_add_region (extra_region);
+		bool readd_success = freemem_add_region (extra_region);
+		if (!readd_success) {
+			kputs (
+				"mm/malloc: Failed to free supposedly allocated "
+				"extra region during realloc!\n");
+			kpanic ();
+		}
 
 		malloc_set_allocated_size (internal_ptr, internal_size);
 
@@ -127,7 +134,11 @@ void free (void *ptr) {
 
 	freemem_region_t region = new_freemem_region (internal_ptr, size);
 
-	freemem_add_region (region); // TODO: panic on failure.
+	bool add_success = freemem_add_region (region);
+	if (!add_success) {
+		kputs ("mm/malloc: Failed to free supposedly allocated region!\n");
+		kpanic ();
+	}
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

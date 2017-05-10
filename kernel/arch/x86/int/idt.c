@@ -1,6 +1,7 @@
 // kernel/arch/x86/int/idt.c
 
 #include <kprint/kprint.h>
+#include <kpanic/kpanic.h>
 #include <mm/malloc.h>
 #include <mm/gdt.h>
 #include <int/idt.h>
@@ -12,8 +13,11 @@ void idt_init () {
 	idt_entry_t *entries;
 	idt_register_logical_t logical_registry;
 
-	// TODO: panic on malloc NULL
 	entries = malloc (IDT_NUMBER_OF_INTERUPTS * sizeof(idt_entry_t));
+	if (!entries) {
+		kputs ("int/idt: Failed to allocate the IDT!\n");
+		kpanic ();
+	}
 
 	for (i = 0; IDT_NUMBER_OF_INTERUPTS > i; ++i) {
 		idt_entry_logical_t logical_entry = {
@@ -33,8 +37,11 @@ void idt_init () {
 		.base = entries
 	};
 
-	// TODO: panic on malloc NULL
 	idt_registry = malloc (sizeof(idt_register_t));
+	if (!idt_registry) {
+		kputs ("int/idt: Failed to allocate the IDT registry!\n");
+		kpanic ();
+	}
 
 	*idt_registry = idt_register_encode (logical_registry);
 }

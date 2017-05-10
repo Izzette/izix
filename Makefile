@@ -57,6 +57,9 @@ endif
 objects_kprint := kprint.o
 objects_kprint := $(addprefix kernel/kprint/,$(objects_kprint))
 
+objects_kpanic := kpanic.o
+objects_kpanic := $(addprefix kernel/kpanic/,$(objects_kpanic))
+
 objects_mm := freemem.o malloc.o
 objects_mm := $(addprefix kernel/mm/,$(objects_mm))
 
@@ -129,6 +132,7 @@ c_source_objects := \
 	$(object_main) \
 	$(objects_drivers) \
 	$(objects_kprint) \
+	$(objects_kpanic) \
 	$(objects_mm) \
 	$(objects_sched) \
 	$(objects_int) \
@@ -168,7 +172,8 @@ objects_kernel := \
 	$(objects_int) \
 	$(objects_isr) \
 	$(objects_irq) \
-	$(objects_kprint)
+	$(objects_kprint) \
+	$(objects_kpanic)
 
 # Libraries to link to.
 libs := \

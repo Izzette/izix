@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include <kprint/kprint.h>
+#include <kpanic/kpanic.h>
 #include <mm/malloc.h>
 #include <mm/gdt.h>
-
 #include <sched/tss.h>
 
 #define GDT_TSS_ACCESS_BYTE 0x89
@@ -193,9 +193,12 @@ segment_selector_t gdt_add_tss (tss_t *tss_ptr) {
 
 	const size_t gdt_entries_old_length = logical_registry.size * sizeof(gdt32_entry_t);
 
-	// TODO: panic on failure
 	gdt32_entry_t *new_entries = realloc (
 			logical_registry.offset, gdt_entries_old_length + 1);
+	if (!new_entries) {
+		kputs ("mm/gdt: Failed to reallocate GDT!\n");
+		kpanic ();
+	}
 
 	if (logical_registry.offset != new_entries)
 		logical_registry.offset = new_entries;

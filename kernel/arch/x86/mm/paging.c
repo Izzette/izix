@@ -1,6 +1,7 @@
 // kernel/arch/x86/mm/paging.c
 
 #include <kprint/kprint.h>
+#include <kpanic/kpanic.h>
 #include <mm/freemem.h>
 #include <mm/page.h>
 #include <mm/paging.h>
@@ -15,9 +16,13 @@ static inline page_table_entry_t *paging_create_table (page_t *offset) {
 	freemem_region_t page_table_region;
 	page_table_entry_t *page_table;
 
-	// TODO: panic on error.
 	page_table_region = freemem_suggest (
 		PAGE_TABLE_LENGTH * sizeof(page_table_entry_t), PAGE_SIZE, 0);
+	if (!page_table_region.length) {
+		kputs ("mm/paging: Failed to allocate a page table!\n");
+		kpanic ();
+	}
+
 	freemem_remove_region (page_table_region);
 	page_table = page_table_region.p;
 
@@ -46,9 +51,13 @@ static inline page_directory_entry_t *paging_create_directory () {
 	page_directory_entry_t *page_directory;
 	page_t *offset;
 
-	// TODO: panic on error.
 	page_directory_region = freemem_suggest (
 		PAGE_DIRECTORY_LENGTH * sizeof(page_directory_entry_t), PAGE_SIZE, 0);
+	if (!page_directory_region.length) {
+		kputs ("mm/paging: Failed to allocate the page directory!\n");
+		kpanic ();
+	}
+
 	freemem_remove_region (page_directory_region);
 	page_directory = page_directory_region.p;
 

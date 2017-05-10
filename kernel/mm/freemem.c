@@ -4,6 +4,8 @@
 
 #include <collections.h>
 
+#include <kprint/kprint.h>
+#include <kpanic/kpanic.h>
 #include <mm/freemem.h>
 
 typedef struct freemem_entry_struct {
@@ -64,8 +66,12 @@ static inline void freemem_move_entry (
 	// Fix the moved entry.
 	freemem_fix_entry (new_location);
 	// Then insert it back into the tree.
-	// TODO: panic if error.
-	bintree_insert_node (freemem_tree, freemem_get_node (new_location));
+	bintree_node_t *conflict = bintree_insert_node (
+			freemem_tree, freemem_get_node (new_location));
+	if (conflict) {
+		kputs ("mm/freemem: Failed to do trivial reinsert while moving an entry!\n");
+		kpanic ();
+	}
 }
 
 static inline void freemem_move_last_entry (freemem_entry_t *new_location) {
@@ -110,7 +116,11 @@ static inline freemem_entry_t *freemem_join_entries (
 	*new_region = joined_region;
 	*new_node = new_bintree_node ((size_t)new_region->p, new_entry);
 
-	bintree_insert_node (freemem_tree, new_node); // TODO: panic if error.
+	bintree_node_t *conflict = bintree_insert_node (freemem_tree, new_node);
+	if (conflict) {
+		kputs ("mm/freemem: Failed to insert joined node!\n");
+		kpanic ();
+	}
 
 	// We have removed two then inserting one, so our count decrements by one.
 	freemem_entry_count -= 1;
@@ -241,19 +251,35 @@ bool freemem_remove_region (freemem_region_t region) {
 		(region_p   == superset_region_p   ? 1 : 0) |
 		(region_end == superset_region_end ? 1 : 0) << 1;
 
+	bool region_add_success;
+	size_t old_length;
+	bintree_node_t *conflict;
+
 	switch (region_facts) {
 		case 0b00: // region shares no edges with superset.
+			old_length = superset_entry->region.length;
 			superset_entry->region.length = region.p - superset_entry->region.p;
-			freemem_add_region ( // TODO: panic if error.
+			region_add_success = freemem_add_region (
 				new_freemem_region (
 					region_end, (size_t)(superset_region_end - region_end)));
+			if (!region_add_success) {
+				// Rollback.
+				superset_entry->region.length = old_length;
+				return false;
+			}
 			break;
 		case 0b01: // region shares the start with superset region.
 			bintree_remove_node (freemem_tree, superset_node);
 			superset_entry->region.p += region.length;
 			superset_entry->region.length -= region.length;
 			superset_node->orderby = (size_t)superset_entry->region.p;
-			bintree_insert_node (freemem_tree, superset_node); // TODO: panic if error.
+			conflict = bintree_insert_node (freemem_tree, superset_node);
+			if (conflict) {
+				kputs (
+					"mm/freemem: Failed to do trivial reinsert while increasing "
+					"start of free region as part of a remove region operation!\n");
+				kpanic ();
+			}
 			break;
 		case 0b10: // region shares the end with superset region.
 			superset_entry->region.length -= region.length;

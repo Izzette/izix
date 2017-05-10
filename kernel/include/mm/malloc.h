@@ -6,7 +6,16 @@
 #include <stddef.h>
 #include <stdalign.h>
 
-#define MALLOC_ALIGNMENT alignof(max_align_t)
+#ifdef _GCC_MAX_ALIGN_T
+typedef max_align_t __malloc_max_align_t;
+#else
+typedef struct {
+	long long __max_align_ll __attribute__((__aligned__(__alignof__(long long))));
+	long double __max_align_ld __attribute__((__aligned__(__alignof__(long double))));
+} __malloc_max_align_t;
+#endif
+
+#define MALLOC_ALIGNMENT alignof(__malloc_max_align_t)
 
 void *malloc (size_t)
 	__attribute__((malloc));
