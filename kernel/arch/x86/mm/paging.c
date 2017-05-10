@@ -4,7 +4,6 @@
 #include <mm/freemem.h>
 #include <mm/page.h>
 #include <mm/paging.h>
-#include <asm/invlpg.h>
 
 page_directory_entry_t *page_directory;
 
@@ -81,8 +80,6 @@ void paging_init () {
 }
 
 void paging_load () {
-	size_t i;
-
 	asm volatile (
 		"mov		%0,					%%cr3;\n"
 		"mov		%%cr0,				%%eax;\n"
@@ -91,10 +88,6 @@ void paging_load () {
 		:
 		:"r"(page_directory)
 		:"memory", "eax");
-
-	// TODO: is this necessary.
-	for (i = 0; PAGE_TABLE_LENGTH * PAGE_DIRECTORY_LENGTH > i; ++i)
-		invlpg ((page_t *)0x0 + i);
 
 	kputs ("mm/paging: Successfully enabled paging.\n");
 }

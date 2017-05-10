@@ -5,13 +5,24 @@
 
 #include <mm/page.h>
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 static inline void invlpg (page_t *physical_page_offset) {
-   asm volatile (
+#ifdef __i486__
+	asm volatile (
 		"invlpg		(%0);\n"
 		:
 		:"r"(physical_page_offset)
 		:"memory");
+#else
+	asm volatile (
+		"mov		%%cr3,				%%eax;\n"
+		"mov		%%eax,				%%cr3;\n"
+		:
+		:
+		:"memory", "eax");
+#endif
 }
+#pragma GCC diagnostic pop
 
 #endif
 
