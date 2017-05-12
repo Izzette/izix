@@ -294,9 +294,9 @@ bool freemem_remove_region (freemem_region_t region) {
 }
 
 freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
-	size_t i;
+	size_t i = freemem_entry_count;
 
-	for (i = freemem_entry_count - 1; 0 != i; --i) {
+	while (i--) {
 		size_t align_inc;
 
 		if ((size_t)freemem_entries[i].region.p % alignment)
