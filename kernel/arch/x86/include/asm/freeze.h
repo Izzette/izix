@@ -3,12 +3,14 @@
 #ifndef IZIX_ASM_FREEZE_H
 #define IZIX_ASM_FREEZE_H 1
 
+#include <asm/toggle_int.h>
+#include <asm/halt.h>
+
 static inline void freeze () {
-	asm volatile (
-		"		cli;\n"
-		".Lfreeze_freeze:\n"
-		"		hlt;\n"
-		"		jmp		.Lfreeze_freeze;\n");
+	disable_int ();
+
+	for (;;)
+		halt ();
 }
 
 #endif

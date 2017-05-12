@@ -25,7 +25,9 @@ endef
 
 # Earlier boot objects
 object_start := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_start.o
-object_main := kernel/boot/$(BOOTLOADER)_main.o
+objects_boot := \
+	kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_main.o \
+	kernel/boot/main_loop.o
 
 # Our custom .init and .fini sections.
 objects_source_crt := crti.o crtn.o
@@ -129,7 +131,7 @@ asm_source_objects := \
 	$(objects_source_crt) \
 	$(objects_isr)
 c_source_objects := \
-	$(object_main) \
+	$(objects_boot) \
 	$(objects_drivers) \
 	$(objects_kprint) \
 	$(objects_kpanic) \
@@ -165,7 +167,7 @@ objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 
 # Kernel objects.
 objects_kernel := \
-	$(object_main) \
+	$(objects_boot) \
 	$(objects_drivers) \
 	$(objects_mm) \
 	$(objects_sched) \
@@ -216,7 +218,8 @@ CFLAGS := \
 	-I./kernel/arch/$(ARCH)/include \
 	-I./libk/include \
 	-ffreestanding \
-	-Werror=format
+	-Werror=format \
+	$(addprefix -DARCH_,$(shell echo $(ARCH) | tr a-z A-Z))
 
 # Our assembling flags.
 ASFLAGS ?= \

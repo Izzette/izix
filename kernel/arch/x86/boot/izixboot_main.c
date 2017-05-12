@@ -1,4 +1,4 @@
-// kernel/boot/izixboot_main.c
+// kernel/arch/x86/boot/izixboot_main.c
 
 #include <stddef.h>
 #include <stdint.h>
@@ -6,6 +6,7 @@
 #include <izixboot/memmap.h>
 #include <izixboot/gdt.h>
 
+#include <boot/main_loop.h>
 #include <tty/tty_driver.h>
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
@@ -18,11 +19,6 @@
 #include <irq/irq_vectors.h>
 #include <isr/isr.h>
 #include <pic_8259/pic_8259.h>
-
-static void __attribute__((noinline)) main_loop () {
-	for (;;)
-		asm volatile ("hlt;\n");
-}
 
 __attribute__((force_align_arg_pointer))
 void kernel_main (
@@ -119,8 +115,6 @@ void kernel_main (
 
 	paging_init ();
 	paging_load ();
-
-	asm volatile ("sti;\n");
 
 	main_loop ();
 
