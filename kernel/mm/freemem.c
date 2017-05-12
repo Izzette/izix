@@ -13,30 +13,22 @@ typedef struct freemem_entry_struct {
 	bintree_node_t node_base;
 } freemem_entry_t;
 
+TPL_PACKED_LIST(freemem_entry, freemem_entry_t)
+
 static bintree_t freemem_tree_base;
 static bintree_t *freemem_tree = &freemem_tree_base;
-static freemem_entry_t *freemem_entries;
-static size_t freemem_entry_max_length;
-static size_t freemem_entry_count = 0;
+static packed_list_freemem_entry_t freemem_entry_list_base;
+static packed_list_freemem_entry_t *freemem_entry_list = &freemem_entry_list_base;
 
 static inline freemem_entry_t new_freemem_entry (
-		freemem_region_t region,
-		bintree_node_t node_base
+		freemem_region_t region
 ) {
 	freemem_entry_t entry = {
 		.region = region,
-		.node_base = node_base
+		.node_base = new_bintree_node (0, NULL)
 	};
 
 	return entry;
-}
-
-static inline freemem_entry_t *freemem_get_last_entry () {
-	return freemem_entries + freemem_entry_count - 1;
-}
-
-static inline bool freemem_is_last_entry (freemem_entry_t *entry) {
-	return entry == freemem_get_last_entry ();
 }
 
 static inline bintree_node_t *freemem_get_node (freemem_entry_t *entry) {
@@ -55,77 +47,59 @@ static inline void freemem_fix_entry (freemem_entry_t *entry) {
 	*node = new_bintree_node (orderby, data);
 }
 
-static inline void freemem_move_entry (
-		freemem_entry_t *entry,
-		freemem_entry_t *new_location
-) {
-	// Remove it from the old location.
+static bool freemem_pre_remove (freemem_entry_t *entry) {
 	bintree_remove_node (freemem_tree, freemem_get_node (entry));
-	// Then move the data.
-	new_location->region = entry->region;
-	// Fix the moved entry.
-	freemem_fix_entry (new_location);
-	// Then insert it back into the tree.
-	bintree_node_t *conflict = bintree_insert_node (
-			freemem_tree, freemem_get_node (new_location));
-	if (conflict) {
-		kputs ("mm/freemem: Failed to do trivial reinsert while moving an entry!\n");
-		kpanic ();
-	}
+
+	return true;
 }
 
-static inline void freemem_move_last_entry (freemem_entry_t *new_location) {
-	freemem_move_entry (freemem_get_last_entry (), new_location);
+static bool freemem_post_add (freemem_entry_t *entry) {
+	// Fix the moved entry.
+	freemem_fix_entry (entry);
+	// Then insert it back into the tree.
+	bintree_node_t *conflict = bintree_insert_node (
+			freemem_tree, freemem_get_node (entry));
+	if (conflict) {
+		kputs ("mm/freemem: Failed to do trivial insert while adding entry!\n");
+		kpanic ();
+	}
+
+	return true;
+}
+
+static void freemem_rollback_remove (freemem_entry_t *entry) {
+	// Fix the moved entry.
+	freemem_fix_entry (entry);
+	// Then insert it back into the tree.
+	bintree_node_t *conflict = bintree_insert_node (
+			freemem_tree, freemem_get_node (entry));
+	if (conflict) {
+		kputs (
+			"mm/freemem: Failed to do trivial reinsert "
+			"while rolling back removal of an entry!\n");
+		kpanic ();
+	}
 }
 
 static inline freemem_entry_t *freemem_join_entries (
 		freemem_entry_t *entry1,
 		freemem_entry_t *entry2
 ) {
-	freemem_region_t joined_region =
-		freemem_join_regions (entry1->region, entry2->region);
+	freemem_entry_t joined_entry_base =
+		new_freemem_entry (freemem_join_regions (entry1->region, entry2->region));
 
-	freemem_region_t *new_region;
-	freemem_entry_t *new_entry;
-	bintree_node_t *node1, *node2, *new_node;
-
-	node1 = freemem_get_node (entry1);
-	node2 = freemem_get_node (entry2);
-
-	bintree_remove_node (freemem_tree, node1);
-	bintree_remove_node (freemem_tree, node2);
-
-	unsigned char last_entry_facts =
-		(freemem_is_last_entry (entry1) ? 1 : 0) |
-		(freemem_is_last_entry (entry2) ? 1 : 0) << 1;
-
-	switch (last_entry_facts) {
-		default: // Neither were last
-			freemem_move_last_entry (entry1);
-		case 0b01: // Entry 1 was last.
-			new_entry = entry2;
-			break;
-		case 0b10: // Entry 2 was last.
-			new_entry = entry1;
-			break;
-	}
-
-	new_node = freemem_get_node (new_entry);
-	new_region = &new_entry->region;
-
-	*new_region = joined_region;
-	*new_node = new_bintree_node ((size_t)new_region->p, new_entry);
-
-	bintree_node_t *conflict = bintree_insert_node (freemem_tree, new_node);
-	if (conflict) {
-		kputs ("mm/freemem: Failed to insert joined node!\n");
+	const bool remove_first_success =
+		freemem_entry_list->remove_elm (freemem_entry_list, entry1);
+	const bool remove_second_success =
+		freemem_entry_list->remove_elm (freemem_entry_list, entry2);
+	if (!remove_first_success || !remove_second_success) {
+		kputs ("mm/freemem: Failed to do trivial entry removal!\n");
 		kpanic ();
 	}
 
-	// We have removed two then inserting one, so our count decrements by one.
-	freemem_entry_count -= 1;
+	freemem_entry_list->append (freemem_entry_list, joined_entry_base);
 
-	return new_entry;
+	return freemem_entry_list->get_last (freemem_entry_list);
 }
 
 // returns joined entry, NULL if not joined.
@@ -171,43 +145,32 @@ static inline freemem_entry_t *freemem_defrag_entry (freemem_entry_t *entry) {
 
 void freemem_init (void *internal, size_t internal_length) {
 	freemem_tree_base = new_bintree ();
-	freemem_entries = internal;
-	freemem_entry_max_length = internal_length / sizeof(freemem_region_t);
+	freemem_entry_list_base = new_packed_list_freemem_entry (
+		internal,
+		internal_length,
+		freemem_pre_remove,
+		freemem_rollback_remove,
+		freemem_post_add);
 }
 
 bool freemem_add_region (freemem_region_t region) {
-	if (freemem_entry_max_length < freemem_entry_count)
+	freemem_entry_t entry_base = new_freemem_entry (region);
+
+	const bool add_success = freemem_entry_list->append (freemem_entry_list, entry_base);
+	if (!add_success)
 		return false;
 
-	freemem_entry_t *entry = freemem_entries + freemem_entry_count;
-
-	bintree_node_t node_base = new_bintree_node ((size_t)region.p, entry);
-	freemem_entry_t entry_base = new_freemem_entry (region, node_base);
-
-	*entry = entry_base;
-
-	bintree_node_t *node, *conflict;
-
-	node = freemem_get_node (entry);
-
-	conflict = bintree_insert_node (freemem_tree, node);
-	if (conflict)
-		return false;
-
-	// commit
-	freemem_entry_count += 1;
-
-	freemem_defrag_entry (entry);
+	freemem_defrag_entry (freemem_entry_list->get_last (freemem_entry_list));
 
 	return true;
 }
 
 bool freemem_remove_region (freemem_region_t region) {
-	if (0 == freemem_entry_count)
+	bintree_node_t *parent = bintree_search (freemem_tree, (size_t)region.p);
+
+	if (!parent)
 		return false;
 
-	// Parent is guaranteed to be non-NULL because freemem_entry_count is non-zero.
-	bintree_node_t *parent = bintree_search (freemem_tree, (size_t)region.p);
 	freemem_region_t parent_region = freemem_get_node_data (parent)->region;
 
 	if (region.p < parent_region.p) do {
@@ -285,22 +248,22 @@ bool freemem_remove_region (freemem_region_t region) {
 			superset_entry->region.length -= region.length;
 			break;
 		default: // region is superset region.
-			bintree_remove_node (freemem_tree, parent);
-			freemem_move_last_entry (superset_entry);
-			freemem_entry_count -= 1;
+			freemem_entry_list->remove_elm (freemem_entry_list, superset_entry);
 	}
 
 	return true;
 }
 
 freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
-	size_t i = freemem_entry_count;
+	packed_list_freemem_entry_iterator_t iterator =
+		new_packed_list_freemem_entry_iterator (freemem_entry_list);
+	freemem_entry_t *entry;
 
-	while (i--) {
+	for (entry = iterator.cur (&iterator); entry; entry = iterator.next (&iterator)) {
 		size_t align_inc;
 
-		if ((size_t)freemem_entries[i].region.p % alignment)
-			align_inc = alignment - (size_t)freemem_entries[i].region.p % alignment;
+		if ((size_t)entry->region.p % alignment)
+			align_inc = alignment - (size_t)entry->region.p % alignment;
 		else
 			align_inc = 0;
 
@@ -312,11 +275,11 @@ freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
 			align_inc -= -1 * offset;
 		}
 
-		if (length + align_inc > freemem_entries[i].region.length)
+		if (length + align_inc > entry->region.length)
 			continue;
 
 		return new_freemem_region (
-			freemem_entries[i].region.p + align_inc,
+			entry->region.p + align_inc,
 			length);
 	}
 
