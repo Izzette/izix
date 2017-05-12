@@ -1,6 +1,7 @@
 // kernel/arch/x86/isr/gp.s
 
 .include	"save_state.s"
+.include	"get_ec.s"
 
 .file		"gp.s"
 
@@ -16,10 +17,9 @@ isr_gp:
 
 	save_state
 
-	push	%ebx
-
-// Error code
-	mov	0x4(%ebp),	%ebx
+	// Put error code in %eax,
+	// use %eax as a scratch register.
+	get_ec %ebx %eax
 
 	test	%ebx,		%ebx
 
@@ -42,8 +42,6 @@ isr_gp:
 	add	$0x08,		%esp
 
 .Lisr_gp_fin:
-	pop	%ebx
-
 	restore_state
 
 	mov	%ebp,		%esp

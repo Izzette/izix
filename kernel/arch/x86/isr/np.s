@@ -1,6 +1,7 @@
 // kernel/arch/x86/isr/np.s
 
 .include	"save_state.s"
+.include	"get_ec.s"
 
 .file		"np.s"
 
@@ -16,10 +17,9 @@ isr_np:
 
 	save_state
 
-	push	%ebx
-
-// Error code
-	mov	0x4(%ebp),	%ebx
+	// Put error code in %eax,
+	// use %eax as a scratch register.
+	get_ec %ebx %eax
 
 	push	$isr_np_error_msg
 	call	kputs
@@ -28,8 +28,6 @@ isr_np:
 	push	%ebx
 	call	int_print_selector_ec
 	add	$0x4,		%esp
-
-	pop	%ebx
 
 	restore_state
 
