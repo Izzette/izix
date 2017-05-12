@@ -60,8 +60,8 @@ void idt_set_isr (interupt_vector_t vector, void (*isr) ()) {
 }
 
 void idt_load () {
-	asm (
-		"	lidt	(%0);\n"
+	asm volatile (
+		"		lidt		(%0);\n"
 		:
 		:"r"(idt_registry));
 

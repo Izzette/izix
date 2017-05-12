@@ -4,7 +4,7 @@
 #define IZIX_ASM_FREEZE_H 1
 
 static inline void freeze () {
-	asm (
+	asm volatile (
 		"		cli;\n"
 		".Lfreeze_freeze:\n"
 		"		hlt;\n"

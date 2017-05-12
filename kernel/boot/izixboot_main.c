@@ -21,7 +21,7 @@
 
 static void __attribute__((noinline)) main_loop () {
 	for (;;)
-		asm ("hlt;\n");
+		asm volatile ("hlt;\n");
 }
 
 __attribute__((force_align_arg_pointer))
@@ -120,7 +120,7 @@ void kernel_main (
 	paging_init ();
 	paging_load ();
 
-	asm ("sti;\n");
+	asm volatile ("sti;\n");
 
 	main_loop ();
 

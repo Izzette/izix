@@ -36,8 +36,8 @@ tss_t *tss_get () {
 }
 
 void tss_load (segment_selector_t tss_selector) {
-	asm (
-		"	ltr		%0;\n"
+	asm volatile (
+		"		ltr		%0;\n"
 		:
 		:"r"(tss_selector));
 
