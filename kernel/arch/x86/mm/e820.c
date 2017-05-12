@@ -67,10 +67,19 @@ void e820_add_freemem () {
 	for (i = 0; e820_entry_count > i; ++i) {
 		if (E820_TYPE_USABLE == e820_entries[i].type) {
 			e820_3x_entry_t entry = e820_entries[i];
+
+			if (entry.base >= SIZE_MAX)
+				continue;
+
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 			void *p = (void *)entry.base;
 #pragma GCC diagnostic pop
-			size_t length = entry.length;
+			size_t length;
+			if (entry.length + entry.base > SIZE_MAX)
+				length = SIZE_MAX - entry.base;
+			else
+				length = entry.length;
+
 			freemem_region_t region = new_freemem_region (p, length);
 
 			freemem_add_region (region);

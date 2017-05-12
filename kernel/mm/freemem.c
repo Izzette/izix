@@ -8,6 +8,13 @@
 #include <kpanic/kpanic.h>
 #include <mm/freemem.h>
 
+// TODO: By limitation of size_t and the choice to use the exclusive maximum of regions
+//       the last byte of the addressable memory space  cannot be used, as the exclusive
+//       maximum will read as zero.  This will likely never be an issue, because there is
+//       (almost?) always a reserved memory region leading up to that byte, but if it were
+//       to occur, it would realistically result of the loss of a complete page of memory.
+//       Perhaps, this should be solved of sooner rather than later ...
+
 typedef struct freemem_entry_struct {
 	freemem_region_t region;
 	bintree_node_t node_base;
