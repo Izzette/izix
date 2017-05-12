@@ -1,1 +1,2 @@
-libk/string/strcat.o: libk/include/string.h
+libk/string/strcat.o: \
+		libk/include/string.h

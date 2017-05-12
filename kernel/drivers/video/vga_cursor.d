@@ -1,1 +1,3 @@
-kernel/drivers/video/vga_cursor.o: kernel/arch/x86/include/asm/io.h kernel/include/video/vga_text.h
+kernel/drivers/video/vga_cursor.o: \
+		kernel/include/video/vga_text.h \
+		kernel/arch/$(ARCH)/include/asm/io.h
