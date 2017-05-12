@@ -61,8 +61,6 @@ static inline page_directory_entry_t *paging_create_directory () {
 	freemem_remove_region (page_directory_region);
 	page_directory = page_directory_region.p;
 
-	offset = 0;
-
 	for (i = 0, offset = 0; PAGE_TABLE_LENGTH > i; ++i, ++offset) {
 		page_table_entry_t *page_table = paging_create_table (offset);
 

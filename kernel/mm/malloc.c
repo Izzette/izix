@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include <string.h>
+#include <math.h>
 
 #include <kpanic/kpanic.h>
 #include <kprint/kprint.h>
@@ -26,9 +27,15 @@ static inline void malloc_set_allocated_size (void *internal_ptr, size_t interna
 }
 
 static inline size_t malloc_get_internal_size (size_t size) {
-	size_t aligned_size = size;
-	if (aligned_size % MALLOC_ALIGNMENT)
-		aligned_size += MALLOC_ALIGNMENT - size % MALLOC_ALIGNMENT;
+	size_t aligned_size;
+
+#if __SIZEOF_SIZE_T__ == __SIZEOF_LONG_LONG__
+	aligned_size = roundull_up (size, MALLOC_ALIGNMENT);
+#elif __SIZEOF_SIZE_T__ == __SIZEOF_LONG__
+	aligned_size = roundul_up (size, MALLOC_ALIGNMENT);
+#else
+	aligned_size = roundui_up (size, MALLOC_ALIGNMENT);
+#endif
 
 	size_t internal_size = aligned_size + MALLOC_ALIGNMENT;
 
@@ -39,15 +46,7 @@ static inline size_t malloc_get_shared_size (size_t size) {
 	return size - MALLOC_ALIGNMENT;
 }
 
-void *malloc (size_t size) {
-	if (!size)
-		return NULL;
-
-	size_t internal_size = malloc_get_internal_size (size);
-
-	// Avoid fragmentation and add room for size_t
-	freemem_region_t suggestion = freemem_suggest (internal_size, MALLOC_ALIGNMENT, 0);
-
+static inline void *malloc_use_suggestion (freemem_region_t suggestion) {
 	if (!suggestion.length)
 		return NULL;  // ENOMEM
 
@@ -63,6 +62,43 @@ void *malloc (size_t size) {
 	malloc_set_allocated_size (internal_ptr, suggestion.length);
 
 	return ptr;
+}
+
+void *malloc (size_t size) {
+	if (!size)
+		return NULL;
+
+	size_t internal_size = malloc_get_internal_size (size);
+
+	freemem_region_t suggestion = freemem_suggest (internal_size, MALLOC_ALIGNMENT, 0);
+
+	return malloc_use_suggestion (suggestion);
+}
+
+void *aligned_alloc (size_t alignment, size_t size) {
+	if (!size || size % alignment)
+		return NULL;
+
+#if __SIZEOF_SIZE_T__ == __SIZEOF_LONG_LONG__
+	if (!is_power2ull (alignment))
+#elif __SIZEOF_SIZE_T__ == __SIZEOF_LONG__
+	if (!is_power2ul (alignment))
+#else
+	if (!is_power2ui (alignment))
+#endif
+		return NULL;
+
+	if (alignment <= MALLOC_ALIGNMENT)
+		return malloc (size);
+
+	size_t internal_size = malloc_get_internal_size (size);
+
+	freemem_region_t suggestion = freemem_suggest (
+		internal_size,
+		alignment,
+		-1 * (int)MALLOC_ALIGNMENT);
+
+	return malloc_use_suggestion (suggestion);
 }
 
 void *realloc (void *ptr, size_t size) {
