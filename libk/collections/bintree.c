@@ -23,11 +23,8 @@ bintree_node_t *bintree_node_##suffix (bintree_node_t *node) { \
 MKBINTREE_NODE_ADJACENT(prev, max, >, low);
 MKBINTREE_NODE_ADJACENT(next, min, <, high);
 
-bintree_node_t *bintree_search (bintree_t *tree, size_t orderby) {
-	if (!tree->root)
-		return NULL;
-
-	bintree_node_t *parent = tree->root;
+bintree_node_t *bintree_sub_search (bintree_node_t *node, size_t orderby) {
+	bintree_node_t *parent = node;
 
 	for (;;) {
 		if (orderby > parent->orderby && parent->high)
