@@ -1,5 +1,7 @@
 // kernel/boot/main_loop.c
 
+#include <sched/kthreads.h>
+
 #if defined(ARCH_X86)
 # include <asm/toggle_int.h>
 # include <asm/halt.h>
@@ -10,9 +12,12 @@ void main_loop () {
 	enable_int ();
 #endif
 
+	kthread_init ();
+
 	for (;;) {
 #if defined(ARCH_X86)
 		halt ();
+		kthread_run ();
 #endif
 	}
 }

@@ -63,7 +63,7 @@ static inline page_directory_entry_t *paging_create_directory () {
 
 	offset = 0;
 
-	for (i = 0, offset = 0; PAGE_TABLE_LENGTH > i; ++i, ++offset) {
+	for (i = 0, offset = 0; PAGE_TABLE_LENGTH > i; ++i, offset += PAGE_TABLE_LENGTH) {
 		page_table_entry_t *page_table = paging_create_table (offset);
 
 		page_directory_entry_logical_t logical_directory_entry = {

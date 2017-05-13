@@ -154,7 +154,7 @@ void freemem_init (void *internal, size_t internal_length) {
 	freemem_tree_base = new_bintree ();
 	freemem_entry_list_base = new_packed_list_freemem_entry (
 		internal,
-		internal_length,
+		internal_length / sizeof(freemem_entry_t),
 		freemem_pre_remove,
 		freemem_rollback_remove,
 		freemem_post_add);

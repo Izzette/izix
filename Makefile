@@ -74,10 +74,16 @@ endif
 objects_sched :=
 objects_sched := $(addprefix kernel/sched/,$(objects_sched))
 
+objects_sched_asm :=
+objects_sched_asm := $(addprefix kernel/sched/,$(objects_sched))
+
 ifeq (x86,$(ARCH))
-objects_x86_sched := tss.o
+objects_x86_sched := tss.o kthreads.o
 objects_x86_sched := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched))
 objects_sched := $(objects_sched) $(objects_x86_sched)
+objects_x86_sched_asm := switch_kthread.o
+objects_x86_sched_asm := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched_asm))
+objects_sched_asm := $(objects_sched_asm) $(objects_x86_sched_asm)
 endif
 
 objects_int :=
@@ -129,7 +135,8 @@ libk := $(addprefix libk/,$(libk))
 asm_source_objects := \
 	$(object_start) \
 	$(objects_source_crt) \
-	$(objects_isr)
+	$(objects_isr) \
+	$(objects_sched_asm)
 c_source_objects := \
 	$(objects_boot) \
 	$(objects_drivers) \
@@ -171,6 +178,7 @@ objects_kernel := \
 	$(objects_drivers) \
 	$(objects_mm) \
 	$(objects_sched) \
+	$(objects_sched_asm) \
 	$(objects_int) \
 	$(objects_isr) \
 	$(objects_irq) \
