@@ -73,9 +73,9 @@ void kernel_main (
 	e820_add_freemem ();
 
 	freemem_remove_region (freemem_internal_region);
-	freemem_remove_region (stack_region);
 	freemem_remove_region (int_stack_region);
 	freemem_remove_region (kernel_region);
+	freemem_remove_region (stack_region);
 
 	gdt_register (gdtr);
 
