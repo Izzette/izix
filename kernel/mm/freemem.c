@@ -2,7 +2,8 @@
 
 #include <stdbool.h>
 
-#include <collections.h>
+#include <collections/bintree.h>
+#include <collections/packed_list.h>
 
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>

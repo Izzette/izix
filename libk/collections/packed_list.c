@@ -1,7 +1,7 @@
 // libk/collections/packed_list.c
 
 #include <string.h>
-#include <collections.h>
+#include <collections/packed_list.h>
 
 size_t packed_list_resize (packed_list_t *list, size_t new_size) {
 	const size_t old_size = packed_list_count (list);

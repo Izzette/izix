@@ -2,9 +2,7 @@
 
 #include <stddef.h>
 
-#include <collections.h>
-
-#include <mm/freemem.h>
+#include <collections/bintree.h>
 
 #define MKBINTREE_NODE_ADJACENT(suffix, hilo, cmp, link) \
 bintree_node_t *bintree_node_##suffix (bintree_node_t *node) { \

@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 #include <string.h>
-#include <collections.h>
 
 #include <mm/malloc.h>
 #include <kpanic/kpanic.h>
