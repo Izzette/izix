@@ -78,10 +78,10 @@ objects_sched_asm :=
 objects_sched_asm := $(addprefix kernel/sched/,$(objects_sched))
 
 ifeq (x86,$(ARCH))
-objects_x86_sched := tss.o kthreads.o
+objects_x86_sched := tss.o kthread.o
 objects_x86_sched := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched))
 objects_sched := $(objects_sched) $(objects_x86_sched)
-objects_x86_sched_asm := switch_kthread.o
+objects_x86_sched_asm := kthread_switch.o kthread_bootstrap.o
 objects_x86_sched_asm := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched_asm))
 objects_sched_asm := $(objects_sched_asm) $(objects_x86_sched_asm)
 endif
@@ -121,7 +121,7 @@ objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
 objects_libk_format := pad.o itoa.o sprintf.o
 objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
 
-objects_libk_collections := bintree.o packed_list.o
+objects_libk_collections := bintree.o packed_list.o linked_list.o
 objects_libk_collections := $(addprefix libk/collections/,$(objects_libk_collections))
 
 # All Libk format objects

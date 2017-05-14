@@ -1,15 +1,15 @@
-// kerenl/arch/x86/asm/switch_kthread.s
+// kerenl/arch/x86/asm/kthread_switch.s
 
-.file		"switch_kthread.s"
+.file		"kthread_switch.s"
 
 	.set	sizeof_registers, 36
 
 .code32
 
-	.global	switch_kthread
-	.type	switch_kthread,	@function
-// void switch_kthread (kthread_registers_t *current, kthread_registers_t *next) {
-switch_kthread:
+	.global	kthread_switch
+	.type	kthread_switch,	@function
+// void kthread_switch (kthread_registers_t *current, kthread_registers_t *next) {
+kthread_switch:
 // Save everything.
 	pushal
 	pushf
@@ -29,7 +29,6 @@ switch_kthread:
 
 // Our next currently running task (next).
 	mov	0x8+sizeof_registers(%ebp), %ebx
-	mov	%ebx,		kthread_running_task
 
 // Our new stack.
 	mov	0x10(%ebx),	%eax
@@ -51,6 +50,6 @@ switch_kthread:
 // Because we switch our stack, ret will now return to the previous %eip.
 	ret
 // }
-	.size	switch_kthread,	.-switch_kthread
+	.size	kthread_switch,	.-kthread_switch
 
 // vim: set ts=8 sw=8 noet syn=asm:

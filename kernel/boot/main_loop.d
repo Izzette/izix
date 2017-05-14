@@ -1,5 +1,5 @@
 kernel/boot/main_loop.o: \
-		kernel/arch/$(ARCH)/include/sched/kthreads.h
+		kernel/arch/$(ARCH)/include/sched/kthread.h
 ifeq (x86,$(ARCH))
 kernel/boot/main_loop.o: \
 		kernel/arch/$(ARCH)/include/asm/toggle_int.h \

@@ -1,11 +1,16 @@
 // kernel/boot/main_loop.c
 
-#include <sched/kthreads.h>
+#include <kprint/kprint.h>
+#include <sched/kthread.h>
 
 #if defined(ARCH_X86)
 # include <asm/toggle_int.h>
 # include <asm/halt.h>
 #endif
+
+void other_task () {
+	kprintf ("hello world from kpid: %d!\n", kthread_get_running ());
+}
 
 void main_loop () {
 #if defined(ARCH_X86)
@@ -13,6 +18,8 @@ void main_loop () {
 #endif
 
 	kthread_init ();
+	kpid_t kpid = kthread_new_task (other_task);
+	kprintf ("child kpid: %d\n", kpid);
 
 	for (;;) {
 #if defined(ARCH_X86)
