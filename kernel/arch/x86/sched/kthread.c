@@ -213,6 +213,8 @@ static void kthread_background_task_destroy () {
 
 		kthread_node = iterator->cur (iterator);
 		while (kthread_node) {
+			// Need to obtain the next node first, because kthread_destroy_thread will
+			// deallocate and kill it.
 			linked_list_kthread_node_t *kthread_next_node = iterator->next (iterator);
 
 			kthread_destroy_thread (kthread_node);
