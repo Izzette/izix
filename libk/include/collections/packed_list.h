@@ -150,11 +150,12 @@ static bool packed_list_##name##_remove ( \
 		packed_list_##name##_t *this, \
 		size_t index \
 ) { \
+	const bool is_last = this->get (this, index) == this->get_last (this); \
 	const bool pre_remove_last_success = this->pre_remove (this->get_last (this)); \
 	if (!pre_remove_last_success) \
 		return false; \
 \
-	if (this->get (this, index) != this->get_last (this)) { \
+	if (!is_last) { \
 		const bool pre_remove_success = this->pre_remove (this->get (this, index)); \
 		if (!pre_remove_success) { \
 			this->rollback_remove (this->get_last (this)); \
@@ -168,7 +169,10 @@ static bool packed_list_##name##_remove ( \
 		return false; \
 	} \
 \
-	return this->post_add (this->get (this, index)); \
+	if (!is_last) \
+		return this->post_add (this->get (this, index)); \
+\
+	return true; \
 } \
 \
 static bool packed_list_##name##_remove_elm ( \

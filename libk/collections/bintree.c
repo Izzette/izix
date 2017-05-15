@@ -103,7 +103,7 @@ void bintree_remove_node_two (bintree_t *tree, bintree_node_t *node) {
 	tree->last_rm = (tree->last_rm + 1) % 2;
 
 	// "replacment" is guerenteed to have zero or one children.
-	if (!replacement->low && !replacement->high)
+	if ((!replacement->low) && (!replacement->high))
 		bintree_remove_node_zero (tree, replacement);
 	else
 		bintree_remove_node_one (tree, replacement);
@@ -116,7 +116,11 @@ void bintree_remove_node_two (bintree_t *tree, bintree_node_t *node) {
 		node->parent->low = replacement;
 
 	replacement->high = node->high;
+	if (replacement->high)
+		replacement->high->parent = replacement;
 	replacement->low = node->low;
+	if (replacement->low)
+		replacement->low->parent = replacement;
 	replacement->parent = node->parent;
 
 	node->high = NULL;
