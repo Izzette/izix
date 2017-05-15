@@ -25,9 +25,7 @@ endef
 
 # Earlier boot objects
 object_start := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_start.o
-objects_boot := \
-	kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_main.o \
-	kernel/boot/main_loop.o
+objects_boot := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_main.o
 
 # Our custom .init and .fini sections.
 objects_source_crt := crti.o crtn.o

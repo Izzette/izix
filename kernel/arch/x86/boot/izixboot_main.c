@@ -6,19 +6,24 @@
 #include <izixboot/memmap.h>
 #include <izixboot/gdt.h>
 
-#include <boot/main_loop.h>
 #include <tty/tty_driver.h>
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
 #include <mm/freemem.h>
+#include <asm/toggle_int.h>
 #include <mm/gdt.h>
 #include <mm/e820.h>
 #include <mm/paging.h>
 #include <sched/tss.h>
+#include <sched/kthread.h>
 #include <int/idt.h>
 #include <irq/irq_vectors.h>
 #include <isr/isr.h>
 #include <pic_8259/pic_8259.h>
+
+void other_task () {
+	kprintf ("hello world from kpid: %d!\n", kthread_get_running_kpid ());
+}
 
 __attribute__((force_align_arg_pointer))
 void kernel_main (
@@ -116,9 +121,12 @@ void kernel_main (
 	paging_init ();
 	paging_load ();
 
-	main_loop ();
+	enable_int ();
 
-	tty_driver_vga_text.release (&tty_driver_vga_text);
+	kthread_init (stack_region);
+	kpid_t kpid = kthread_new_task (other_task);
+	kprintf ("child kpid: %d\n", kpid);
+	kthread_end_task ();
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

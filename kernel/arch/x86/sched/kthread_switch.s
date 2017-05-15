@@ -14,7 +14,8 @@ kthread_switch:
 	pushal
 	pushf
 
-// No iteruptions.
+// TODO: we might be able to accept interupts here because the task is locked, but the
+// stack is kind of funky.
 	cli
 
 // Keep our base pointer in place.
@@ -43,6 +44,9 @@ kthread_switch:
 
 // Use our new stack.
 	mov	%eax,		%esp
+
+// Reduce lock depth by 1.
+	call	kthread_unlock_task
 
 // Return to our last state.
 	popf
