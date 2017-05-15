@@ -266,8 +266,8 @@ int vsprintf (char *str, const char *format, va_list ap) {
 
 		format += placeholder_len;
 
-		int int_base;
-		bool int_signed;
+		int int_base = 0;
+		bool int_signed = false;
 
 		int as_int;
 		long as_long;
