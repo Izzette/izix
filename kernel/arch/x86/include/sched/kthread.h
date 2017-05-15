@@ -9,7 +9,8 @@ typedef int kpid_t;
 
 void kthread_init ();
 kpid_t kthread_new_task (void (*) ());
-void kthread_end_task ();
+void kthread_end_task ()
+	__attribute__((noreturn));
 void kthread_yeild ();
 bool kthread_wake (kpid_t);
 void kthread_block ();

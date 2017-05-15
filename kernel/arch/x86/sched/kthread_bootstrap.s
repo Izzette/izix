@@ -6,11 +6,13 @@
 
 	.globl	kthread_bootstrap
 	.type	kthread_bootstrap, @function
+// void kthread_bootstrap (void (*) ()) {
 kthread_bootstrap:
-	call	*(%esp)
-	add	$0x4,		%esp
+	call	*0x4(%esp)
 	
 	call	kthread_end_task
+	// kthread_end_task doesn't return ...
+// }
 	.size	kthread_bootstrap, .-kthread_bootstrap
 
 // vim: set ts=8 sw=8 noet syn=asm:

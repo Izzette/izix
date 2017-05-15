@@ -261,10 +261,10 @@ kpid_t kthread_new_task (void (*task) ()) {
 	volatile kthread_registers_t *new_task = &new_kthread_node->data.task;
 
 	// Our bootstrap code, the "glue" that keeps the stack backtraceable.
-	kthread_task_push_frame ((kthread_registers_t *)new_task);
 #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 	kthread_task_pushl ((kthread_registers_t *)new_task, (uint32_t)task);
 #pragma GCC diagnostic pop
+	kthread_task_pushl ((kthread_registers_t *)new_task, 0);
 	kthread_task_push_caller ((kthread_registers_t *)new_task, kthread_bootstrap);
 
 	kthreads_active->append ((linked_list_kthread_t *)kthreads_active, new_kthread_node);
@@ -293,7 +293,8 @@ void kthread_end_task () {
 		ignored_task_base,
 		*ignored_task = &ignored_task_base;
 
-	kthread_next_task (ignored_task);
+	for (;;)  // Avoid compiler warning about noreturn functions returning.
+		kthread_next_task (ignored_task);
 }
 
 void kthread_yeild () {
