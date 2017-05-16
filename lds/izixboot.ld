@@ -22,24 +22,30 @@ SECTIONS
         *(.fini)
     }
 
-    /* Read-only data. */
-    .rodata BLOCK(4K) : ALIGN(4K)
-    {
-        *(.rodata)
-        *(.rodata.*)
-        *(.eh_frame)
-    }
-
-    /* Read-write data (initialized) */
+    /* Data (initialized) */
     .data BLOCK(4K) : ALIGN(4K)
     {
         *(.data)
         *(.ctors)
         *(.dtors)
         *(.jcr)
+
+        /**
+         * There is no memory protection anyways,
+         * so let's just shove it all in data.
+         */
+        *(.rodata)
+        *(.rodata.*)
+        *(.eh_frame)
+    }
+
+    /* Data (un-initialized) */
+    .bss BLOCK(4K) : ALIGN(4K)
+    {
+        __gnu_bssstart = .;
         *(COMMON)
-        /* Kill the BSS section, since our bootloader doesn't initialize it. */
         *(.bss)
+        __gnu_bssend = .;
     }
 }
 

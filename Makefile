@@ -29,6 +29,9 @@ objects_boot := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_main.o
 
 # Our custom .init and .fini sections.
 objects_source_crt := crti.o crtn.o
+ifeq (izixboot,$(BOOTLOADER))
+objects_source_crt := $(objects_source_crt) crti_zero_bss.o
+endif
 objects_source_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_source_crt))
 
 # GCCs .init and .fini sections.
@@ -167,7 +170,11 @@ linker_script := $(addprefix lds/,$(linker_script))
 objects_first := $(object_start)
 
 # .init section
-objects_begin_crt := crti.o crtbegin.o
+objects_begin_crt := crti.o
+ifeq (izixboot,$(BOOTLOADER))
+objects_begin_crt := $(objects_begin_crt) crti_zero_bss.o
+endif
+objects_begin_crt := $(objects_begin_crt) crtbegin.o
 objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 
 # Kernel objects.
@@ -244,16 +251,6 @@ STRIPFLAGS ?= \
 	--remove-section=.note.ABI-tag \
 	--strip-all \
 	--strip-unneeded
-
-# Bootloader specific flags.
-ifeq (izixboot,$(BOOTLOADER))
-CFLAGS := \
-	$(CFLAGS) \
-	-fno-zero-initialized-in-bss
-ASFLAGS := \
-	$(ASFLAGS) \
-	-fno-zero-initialized-in-bss
-endif
 
 
 ####################
