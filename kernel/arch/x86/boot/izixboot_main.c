@@ -21,10 +21,6 @@
 #include <isr/isr.h>
 #include <pic_8259/pic_8259.h>
 
-void other_task () {
-	kprintf ("hello world from kpid: %d!\n", kthread_get_running_kpid ());
-}
-
 __attribute__((force_align_arg_pointer))
 void kernel_main (
 		uint32_t e820_entry_count_u32,
@@ -126,8 +122,6 @@ void kernel_main (
 	enable_int ();
 
 	kthread_init (stack_region);
-	kpid_t kpid = kthread_new_task (other_task);
-	kprintf ("child kpid: %d\n", kpid);
 	kthread_end_task ();
 }
 
