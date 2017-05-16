@@ -2,6 +2,9 @@
 
 .file		"boot.s"
 
+	.set	stack_length,	0x8000
+	.set	stack_low,	0x0
+
 .code32
 
 .section	.text
@@ -24,7 +27,7 @@ _start:
 	mov	0x10(%esp),	%edx
 
 // We don't need anything else on this stack every again, reinitialize it.
-	mov	$0x8000,	%esp
+	mov	$stack_length+stack_low, %esp
 
 	push	%ecx
 	push	%edx
@@ -35,8 +38,11 @@ _start:
 	push	%edx
 	push	%ecx
 	push	%ebx
+	pushl	$__gnu_bssend
+	pushl	$stack_length
+	pushl	$stack_low
 	call	kernel_main
-	add	$0x8,		%sp
+	add	$0x18,		%sp
 
 	call	_fini
 

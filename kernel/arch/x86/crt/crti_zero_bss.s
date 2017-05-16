@@ -12,21 +12,29 @@ init_zero_bss:
 	mov	%esp,		%ebp
 
 // Non SysV function, inlined into init()
+	push	%eax
 	push	%edi
 	pushf
 
-	mov	$__gnu_bssstart, %edi
+// %edi contains word offset from .bss start.
+	xor	%edi,		%edi
 
+// while (...)
 	jmp	.Linit_zero_bss_chk_end
 
 .Linit_zero_bss_write:
-	movw	$0,		(%edi)
-
+// %eax is set in .init_zero_bss_chk_end to the byte offset (word-aligned) from .bss start.
+	movw	$0,		__gnu_bssstart(%eax)
 .Linit_zero_bss_inc:
-	add	$2,		%edi
+// Incrment the word offset.
+	inc	%edi
 
 .Linit_zero_bss_chk_end:
-	cmp	$__gnu_bssend,	%edi
+// Compute byte offset from word offset.
+	leal	(,%edi,2),	%eax
+// Compare byte offset against the BSS length,
+// and write the next word if it is less than.
+	cmp	$__gnu_bsslength, %eax
 	jl	.Linit_zero_bss_write
 
 .Linit_zero_bss_fin:

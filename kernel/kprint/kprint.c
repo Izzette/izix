@@ -9,6 +9,8 @@
 #include <kprint/kprint.h>
 #include <sched/kthread.h>
 
+static char kprint_buffer[1024];
+
 static volatile tty_driver_t kprint_tty_driver;
 
 void set_kprint_tty_driver (tty_driver_t driver) {
@@ -45,16 +47,15 @@ void kputs (const char *str) {
 int kprintf (const char *format, ...) {
 	kthread_lock_task ();
 
-	char buf[128];
 	va_list ap;
 
 	va_start(ap, format);
 
-	int ret = vsprintf (buf, format, ap);
+	int ret = vsprintf (kprint_buffer, format, ap);
 
 	va_end(ap);
 
-	kputs (buf);
+	kputs (kprint_buffer);
 
 	kthread_unlock_task ();
 

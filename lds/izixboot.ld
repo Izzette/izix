@@ -10,6 +10,10 @@ SECTIONS
      */
     . = 0x8000;
 
+    __gnu_bssstart = ADDR(.bss);
+    __gnu_bsslength = SIZEOF(.bss);
+    __gnu_bssend = __gnu_bssstart + __gnu_bsslength;
+
     /**
      * Lets start our kernels entry point at 0x9000,
      * so that it can be loaded by our bootloader while in real mode.
@@ -42,10 +46,8 @@ SECTIONS
     /* Data (un-initialized) */
     .bss BLOCK(4K) : ALIGN(4K)
     {
-        __gnu_bssstart = .;
         *(COMMON)
         *(.bss)
-        __gnu_bssend = .;
     }
 }
 

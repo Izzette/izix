@@ -21,14 +21,24 @@
 #include <isr/isr.h>
 #include <pic_8259/pic_8259.h>
 
+#define KERNEL_START      ((void *)0x8000)
+#define KERNEL_MAX_LENGTH (127 * (size_t)512)
+#define KERNEL_MAX_END    (KERNEL_START + KERNEL_MAX_LENGTH)
+
 __attribute__((force_align_arg_pointer))
 void kernel_main (
+		uint32_t stack_start_u32,
+		uint32_t stack_length_u32,
+		uint32_t bss_end_u32,
 		uint32_t e820_entry_count_u32,
 		uint32_t e820_entries_u32,
 		uint32_t gdtr_u32
 ) {
 	size_t e820_entry_count = (size_t)e820_entry_count_u32;
+	size_t stack_length = (size_t)stack_length_u32;
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+	void *stack_start = (void *)stack_start_u32;
+	void *bss_end = (void *)bss_end_u32;
 	e820_3x_entry_t *e820_entries = (e820_3x_entry_t *)e820_entries_u32;
 	gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
 #pragma GCC diagnostic pop
@@ -41,9 +51,15 @@ void kernel_main (
 
 	kprintf (
 		"boot/izixboot_main: Provided command line:\n"
+			"\tstack_start=%p\n"
+			"\tstack_length=0x%zx\n"
+			"\tbss_end=%p\n"
 			"\te820_entry_count=%zd\n"
 			"\te820_entries=%p\n"
 			"\tgdtr=%p\n",
+		stack_start,
+		stack_length,
+		bss_end,
 		e820_entry_count,
 		e820_entries,
 		gdtr);
@@ -55,19 +71,25 @@ void kernel_main (
 		kernel_region, stack_region,
 		int_stack_region, freemem_internal_region;
 
-	// TODO: get the actually start and length of the kernel.
+	const size_t kernel_and_bss_length =
+		((bss_end > KERNEL_MAX_END) ?
+			(size_t)(bss_end - KERNEL_START)
+			: KERNEL_MAX_LENGTH);
+
+	// TODO: Get the actually start and length of the kernel by parsing its own ELF at
+	// runtime or by createing all the nessesary symbols in the linker script.
 	kernel_region = new_freemem_region (
-		(void *)0x8000,
-		(size_t)(512 * 127));
+		KERNEL_START,
+		kernel_and_bss_length);
 	stack_region = new_freemem_region (
-		(void *)0x0,
-		(size_t)kernel_region.p);
+		stack_start,
+		stack_length);
 	int_stack_region = new_freemem_region (
 		freemem_get_region_end (kernel_region), // Exclusive max.
-		stack_region.length);
+		KTHREAD_STACK_SIZE);
 	freemem_internal_region = new_freemem_region (
 		freemem_get_region_end (int_stack_region), // Exclusive max.
-		(size_t)0x1000);
+		PAGE_SIZE);
 
 	freemem_init (freemem_internal_region.p, freemem_internal_region.length);
 
