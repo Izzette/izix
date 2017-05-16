@@ -8,6 +8,7 @@
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <mm/freemem.h>
+#include <sched/kthread.h>
 
 // TODO: By limitation of size_t and the choice to use the exclusive maximum of regions
 //       the last byte of the addressable memory space  cannot be used, as the exclusive
@@ -130,17 +131,7 @@ static inline bintree_freemem_node_t *freemem_defrag_entry (bintree_freemem_node
 	return entry;
 }
 
-void freemem_init (void *internal, size_t internal_length) {
-	freemem_tree_base = new_bintree_freemem ();
-	freemem_entry_list_base = new_packed_list_freemem (
-		internal,
-		internal_length / sizeof(bintree_freemem_node_t),
-		freemem_pre_remove,
-		freemem_rollback_remove,
-		freemem_post_add);
-}
-
-bool freemem_add_region (freemem_region_t region) {
+static bool freemem_add_region_internal (freemem_region_t region) {
 	bintree_freemem_node_t entry_base = new_freemem_entry (region);
 
 	const bool add_success = freemem_entry_list->append (freemem_entry_list, entry_base);
@@ -152,7 +143,7 @@ bool freemem_add_region (freemem_region_t region) {
 	return true;
 }
 
-bool freemem_remove_region (freemem_region_t region) {
+static bool freemem_remove_region_internal (freemem_region_t region) {
 	bintree_freemem_iterator_t iterator_base, *iterator = &iterator_base;
 	bintree_freemem_node_t *parent;
 	void *region_end, *parent_region_end;
@@ -203,7 +194,7 @@ bool freemem_remove_region (freemem_region_t region) {
 		case 0b00: // region shares no edges with superset.
 			old_length = parent->data.length;
 			parent->data.length = region.p - parent->data.p;
-			region_add_success = freemem_add_region (
+			region_add_success = freemem_add_region_internal (
 				new_freemem_region (
 					region_end, (size_t)(parent_region_end - region_end)));
 			if (!region_add_success) {
@@ -236,7 +227,11 @@ bool freemem_remove_region (freemem_region_t region) {
 	return true;
 }
 
-freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
+static freemem_region_t freemem_suggest_internal (
+		size_t length,
+		size_t alignment,
+		int offset
+) {
 	packed_list_freemem_iterator_t iterator =
 		new_packed_list_freemem_iterator (freemem_entry_list);
 	bintree_freemem_node_t *entry;
@@ -266,6 +261,51 @@ freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
 	}
 
 	return new_freemem_region ((void *)0x0, 0);
+}
+
+void freemem_init (void *internal, size_t internal_length) {
+	kthread_lock_task ();
+
+	freemem_tree_base = new_bintree_freemem ();
+	freemem_entry_list_base = new_packed_list_freemem (
+		internal,
+		internal_length / sizeof(bintree_freemem_node_t),
+		freemem_pre_remove,
+		freemem_rollback_remove,
+		freemem_post_add);
+
+	kthread_unlock_task ();
+
+}
+
+bool freemem_add_region (freemem_region_t region) {
+	kthread_lock_task ();
+
+	const bool ret = freemem_add_region_internal (region);
+
+	kthread_unlock_task ();
+
+	return ret;
+}
+
+bool freemem_remove_region (freemem_region_t region) {
+	kthread_lock_task ();
+
+	const bool ret = freemem_remove_region_internal (region);
+
+	kthread_unlock_task ();
+
+	return ret;
+}
+
+freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
+	kthread_lock_task ();
+
+	const freemem_region_t ret = freemem_suggest_internal (length, alignment, offset);
+
+	kthread_unlock_task ();
+
+	return ret;
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

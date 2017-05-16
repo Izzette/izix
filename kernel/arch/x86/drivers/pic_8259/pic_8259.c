@@ -28,6 +28,35 @@
 #define ICW4_BUF_MASTER 0x0C // Buffered mode/master
 #define ICW4_SFNM       0x10 // Special fully nested (not)
 
+static inline bool pic_8259_is_master_irq (irq_t irq) {
+	return 8 > irq;
+}
+
+static inline bool pic_8259_is_slave_irq (irq_t irq) {
+	return !pic_8259_is_master_irq (irq);
+}
+
+static inline irq_t pic_8259_get_relative_irq (irq_t irq) {
+	if (pic_8259_is_slave_irq (irq))
+		return irq - 8;
+
+	return irq;
+}
+
+static inline uint16_t pic_8259_get_pic_cmd_port (irq_t irq) {
+	if (pic_8259_is_master_irq (irq))
+		return PIC_MASTER_CMD;
+
+	return PIC_SLAVE_CMD;
+}
+
+static inline uint16_t pic_8259_get_pic_data_port (irq_t irq) {
+	if (pic_8259_is_master_irq (irq))
+		return PIC_MASTER_DATA;
+
+	return PIC_SLAVE_DATA;
+}
+
 void pic_8259_send_eoi (irq_t irq) {
 	if(irq >= 8)
 		outb (PIC_EOI, PIC_SLAVE_CMD);
@@ -71,6 +100,29 @@ void pic_8259_reinit () {
 	// Restore saved masks.
 	outb (mask_master, PIC_MASTER_DATA);
 	outb (mask_slave, PIC_SLAVE_DATA);
+}
+
+void pic_8259_mask (irq_t irq) {
+	const uint16_t port = pic_8259_get_pic_data_port (irq);
+	const irq_t relative_irq = pic_8259_get_relative_irq (irq);
+
+	const uint8_t value = inb (port) | (1 << relative_irq);
+	outb (value, port);
+}
+
+void pic_8259_unmask (irq_t irq) {
+	const uint16_t port = pic_8259_get_pic_data_port (irq);
+	const irq_t relative_irq = pic_8259_get_relative_irq (irq);
+
+	const uint8_t value = inb (port) & ~(1 << relative_irq);
+	outb (value, port);
+}
+
+bool pic_8259_is_masked (irq_t irq) {
+	const uint16_t port = pic_8259_get_pic_data_port (irq);
+	const irq_t relative_irq = pic_8259_get_relative_irq (irq);
+
+	return 0 != (inb (port) & (1 << relative_irq));
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

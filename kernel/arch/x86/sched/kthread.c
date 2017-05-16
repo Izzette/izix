@@ -17,6 +17,7 @@
 #include <sched/kthread_bootstrap.h>
 #include <sched/kthread.h>
 #include <sched/spinlock.h>
+#include <irq/irq.h>
 
 typedef struct kthread_lock_struct {
 	spinlock_t spinlock;
@@ -222,6 +223,10 @@ static inline void kthread_next_task (volatile kthread_registers_t *this_task) {
 		kthreads_active->pop ((linked_list_kthread_t *)kthreads_active);
 
 	if (next_kthread_node) {
+		if (kthread_get_running_kpid () == next_kthread_node->data.kpid)
+			// Just return back to the task rather than switching back to the same task.
+			return;
+
 		// Increment lock depth on next task before swapping with kthread_running_node.
 		volatile kthread_lock_t *next_kthread_lock = &next_kthread_node->data.lock;
 		spinlock_try_lock (&next_kthread_lock->spinlock);
@@ -231,12 +236,15 @@ static inline void kthread_next_task (volatile kthread_registers_t *this_task) {
 
 		kthread_switch (this_task, kthread_get_running_task ());
 	} else {
+		if (kthread_get_running_kpid () == kthread_idle_task_kpid)
+			return;
+
 		// If there is nothing to do wake idle task and run it.
 		const bool idle_wake_success = kthread_wake (kthread_idle_task_kpid);
 		if (!idle_wake_success) {
 			kputs (
 				"sched/kthread: Failed to wake supposedly "
-				"blocking kthread idle bacgkround task!\n");
+				"blocking kthread idle background task!\n");
 			kpanic ();
 		}
 
@@ -275,8 +283,28 @@ static inline void kthread_add_blocking_task (
 		kthread_blocking_node);
 }
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void kthread_pit_825x_irq0_hook (irq_t irq) {
+	// If we can't obtain the exclusive lock, we return to the task because switching
+	// isn't safe or desirable for the currently running thread.
+	if (!kthread_lock_task ()) {
+		kthread_unlock_task ();
+		return;
+	}
+
+	kthread_yield ();
+
+	kthread_unlock_task ();
+}
+#pragma GCC diagnostic pop
+
 static void kthread_background_task_idle () {
 	kputs ("sched/kthread: Started idle background task.\n");
+
+	// Spontaneous task switching would result in this thread "kthread_yield"ing which
+	// would add it back to the active queue, and thus execute it again even if threads
+	// are active and pending execution.
+	kthread_lock_task ();
 
 	for (;;) {
 		// Then just halt, and block until needed again.
@@ -293,11 +321,11 @@ static void kthread_background_task_destroy () {
 
 	kputs ("sched/kthread: Started kthread destruction background task.\n");
 
-	// No spontaneous task switching for this task.
+	// No preemptive switching for this task.
 	kthread_lock_task ();
 
 	for (;;) {
-		// Not safe to use reset here, becuase the iterator does not use volatile links.
+		// Not safe to use reset here, because the iterator does not use volatile links.
 		iterator_base = kthreads_destroy->new_iterator (
 			(linked_list_kthread_t *)kthreads_destroy);
 
@@ -355,7 +383,10 @@ void kthread_init (freemem_region_t main_stack_region) {
 		kpanic ();
 	}
 
-	kputs ("sched/kthread: Successfuly initalized kthreads.\n");
+	// Switch tasks on PIT 8253/8254 IRQ0.
+	irq_add_post_hook (0, kthread_pit_825x_irq0_hook);
+
+	kputs ("sched/kthread: Successfully initialized kthreads.\n");
 }
 
 bool kthread_is_init () {
@@ -374,7 +405,7 @@ kpid_t kthread_new_task (void (*task) ()) {
 
 	volatile kthread_registers_t *new_task = &new_kthread_node->data.task;
 
-	// Our bootstrap code, the "glue" that keeps the stack backtraceable.
+	// Our bootstrap code, the "glue" that keeps the stack back traceable.
 #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 	kthread_task_pushl ((kthread_registers_t *)new_task, (uint32_t)task);
 #pragma GCC diagnostic pop
@@ -393,7 +424,7 @@ kpid_t kthread_new_blocking_task (void (*task) ()) {
 	kthread_lock_task ();
 
 	kpid_t new_blocking_kpid = kthread_new_task (task);
-	// Gurenteed to be at end of active queue.
+	// Guaranteed to be at end of active queue.
 	linked_list_kthread_node_t *new_blocking_kthread_node =
 		kthreads_active->popEnd ((linked_list_kthread_t *)kthreads_active);
 
@@ -420,11 +451,11 @@ void kthread_end_task () {
 		ignored_task_base,
 		*ignored_task = &ignored_task_base;
 
-	for (;;)  // Avoid compiler warning about noreturn functions returning.
+	for (;;)  // Avoid compiler warning about "noreturn" functions returning.
 		kthread_next_task (ignored_task);
 }
 
-void kthread_yeild () {
+void kthread_yield () {
 	kthread_lock_task ();
 
 	kthreads_active->append (
@@ -474,16 +505,24 @@ void kthread_block () {
 	kthread_unlock_task ();
 }
 
-void kthread_lock_task () {
+bool kthread_lock_task () {
+	// Can in all likely-hood consider a call to lock task the first lock so long as
+	// kthreads aren't initialized.
+	if (!kthread_is_init ())
+		return true;
+
 	volatile kthread_lock_t *running_lock = kthread_get_running_lock ();
 
-	// We don't care whether or not the lock has been obtained because tasks can't switch
-	// if the task lock has been obtained.
-	spinlock_try_lock (&running_lock->spinlock);
+	const bool first_lock = spinlock_try_lock (&running_lock->spinlock);
 	running_lock->depth += 1;
+
+	return first_lock;
 }
 
 void kthread_unlock_task () {
+	if (!kthread_is_init ())
+		return;
+
 	volatile kthread_lock_t *running_lock = kthread_get_running_lock ();
 
 	if (1 >= running_lock->depth) {
@@ -493,12 +532,6 @@ void kthread_unlock_task () {
 	}
 
 	running_lock->depth -= 1;
-}
-
-bool kthread_task_is_locked () {
-	volatile kthread_lock_t *running_lock = kthread_get_running_lock ();
-
-	return 0 != running_lock->depth;
 }
 
 kpid_t kthread_get_running_kpid () {

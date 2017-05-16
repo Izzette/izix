@@ -116,6 +116,8 @@ void kernel_main (
 
 	pic_8259_reinit ();
 
+	irq_init ();
+
 	idt_load ();
 
 	paging_init ();

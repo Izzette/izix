@@ -7,27 +7,44 @@
 
 #include <tty/tty_driver.h>
 #include <kprint/kprint.h>
+#include <sched/kthread.h>
 
-static tty_driver_t kprint_tty_driver;
+static volatile tty_driver_t kprint_tty_driver;
 
 void set_kprint_tty_driver (tty_driver_t driver) {
-	memcpy (&kprint_tty_driver, &driver, sizeof(tty_driver_t));
+	kthread_lock_task ();
+
+	memcpy ((void *)&kprint_tty_driver, &driver, sizeof(tty_driver_t));
 
 	kprintf ("kprint: Using TTY driver %s.\n", kprint_tty_driver.term_descriptor);
+
+	kthread_unlock_task ();
 }
 
 tty_driver_t get_kprint_tty_driver () {
-	return kprint_tty_driver;
+	kthread_lock_task ();
+
+	tty_driver_t driver = kprint_tty_driver;
+
+	kthread_unlock_task ();
+
+	return driver;
 }
 
 void kputs (const char *str) {
+	kthread_lock_task ();
+
 	char c;
 
 	while ((c = *str++))
-		kprint_tty_driver.putc (&kprint_tty_driver, c);
+		kprint_tty_driver.putc ((tty_driver_t *)&kprint_tty_driver, c);
+
+	kthread_unlock_task ();
 }
 
 int kprintf (const char *format, ...) {
+	kthread_lock_task ();
+
 	char buf[128];
 	va_list ap;
 
@@ -38,6 +55,8 @@ int kprintf (const char *format, ...) {
 	va_end(ap);
 
 	kputs (buf);
+
+	kthread_unlock_task ();
 
 	return ret;
 }
