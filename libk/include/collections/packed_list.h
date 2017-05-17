@@ -239,7 +239,7 @@ static void packed_list_##name##_iterator_reset (packed_list_##name##_iterator_t
 	return packed_list_iterator_reset (&this->internal_iterator); \
 } \
 \
-static packed_list_##name##_iterator_t new_packed_list_##name##_iterator ( \
+static inline packed_list_##name##_iterator_t new_packed_list_##name##_iterator ( \
 		packed_list_##name##_t *list \
 ) { \
 	packed_list_##name##_iterator_t iterator = { \
