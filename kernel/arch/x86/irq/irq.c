@@ -9,9 +9,7 @@
 #include <irq/irq.h>
 #include <pic_8259/pic_8259.h>
 
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 TPL_LINKED_LIST(irq_hook, irq_hook_t)
-#pragma GCC diagnostic pop
 
 static volatile linked_list_irq_hook_t *irq_pre_hooks;
 static volatile linked_list_irq_hook_t *irq_post_hooks;

@@ -6,10 +6,14 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+typedef struct __attribute__((packed)) linked_list_zero_width_struct {
+} __attribute__((__may_alias__)) linked_list_zero_width_t;
+
 typedef struct linked_list_node_struct linked_list_node_t;
 typedef struct linked_list_node_struct {
 	linked_list_node_t *prev;
 	linked_list_node_t *next;
+	linked_list_zero_width_t data;
 } linked_list_node_t;
 
 static inline linked_list_node_t new_linked_list_node () {
@@ -103,13 +107,15 @@ static inline linked_list_t new_linked_list () {
 
 #define TPL_LINKED_LIST(name, type) \
 typedef struct linked_list_##name##_node_struct { \
-	linked_list_node_t node; \
+	linked_list_node_t *prev; \
+	linked_list_node_t *next; \
 	type data; \
 } linked_list_##name##_node_t; \
 \
 static inline linked_list_##name##_node_t new_linked_list_##name##_node (type data) { \
 	linked_list_##name##_node_t node = { \
-		.node = new_linked_list_node (), \
+		.prev = NULL, \
+		.next = NULL, \
 		.data = data \
 	}; \
 \
@@ -121,8 +127,8 @@ typedef struct linked_list_##name##_iterator_struct { \
 	linked_list_##name##_node_t *(*cur) (linked_list_##name##_iterator_t *); \
 	linked_list_##name##_node_t *(*next) (linked_list_##name##_iterator_t *); \
 	linked_list_##name##_node_t *(*prev) (linked_list_##name##_iterator_t *); \
-	void (*reset) (linked_list_##name##_iterator_t); \
-} linked_list_##name##_iterator_t; \
+	void (*reset) (linked_list_##name##_iterator_t *); \
+} __attribute__((__may_alias__)) linked_list_##name##_iterator_t; \
 \
 static inline linked_list_##name##_iterator_t new_linked_list_##name##_iterator ( \
 		linked_list_##name##_node_t *node \
@@ -135,20 +141,19 @@ typedef struct linked_list_##name##_struct linked_list_##name##_t; \
 typedef struct linked_list_##name##_struct { \
 	linked_list_##name##_node_t *start; \
 	linked_list_##name##_node_t *end; \
-	linked_list_##name##_node_t *(*count) (linked_list_##name##_t *); \
+	size_t (*count) (linked_list_##name##_t *); \
 	linked_list_##name##_node_t *(*peek) (linked_list_##name##_t *); \
 	linked_list_##name##_node_t *(*peekEnd) (linked_list_##name##_t *); \
-	linked_list_##name##_node_t *(*get) (linked_list_##name##_t *, size_t i); \
+	linked_list_##name##_node_t *(*get) (linked_list_##name##_t *, size_t); \
 	void (*push) (linked_list_##name##_t *, linked_list_##name##_node_t *); \
 	void (*append) (linked_list_##name##_t *, linked_list_##name##_node_t *); \
-	bool (*insert) (linked_list_##name##_t *, size_t i, linked_list_##name##_node_t *); \
+	bool (*insert) (linked_list_##name##_t *, size_t, linked_list_##name##_node_t *); \
 	linked_list_##name##_node_t *(*pop) (linked_list_##name##_t *); \
 	linked_list_##name##_node_t *(*popEnd) (linked_list_##name##_t *); \
 	linked_list_##name##_node_t *(*remove) (linked_list_##name##_t *, size_t); \
-	linked_list_##name##_node_t *(*removeNode) ( \
-			linked_list_##name##_t *, linked_list_##name##_node_t *); \
+	void (*removeNode) (linked_list_##name##_t *, linked_list_##name##_node_t *); \
 	linked_list_##name##_iterator_t (*new_iterator) (linked_list_##name##_t *); \
-} linked_list_##name##_t; \
+} __attribute__((__may_alias__)) linked_list_##name##_t; \
 \
 static inline linked_list_##name##_t new_linked_list_##name () { \
 	linked_list_t list = new_linked_list (); \

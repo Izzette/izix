@@ -37,9 +37,7 @@ typedef struct __attribute__((packed)) zero_width_struct {
 
 static const zero_width_t zero_wide;
 
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 TPL_LINKED_LIST(kthread, volatile kthread_t);
-#pragma GCC diagnostic pop
 TPL_BINTREE(kpid, zero_width_t);
 TPL_BINTREE(kthread, linked_list_kthread_node_t *);
 
