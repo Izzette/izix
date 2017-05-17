@@ -104,6 +104,10 @@ static inline segment_selector_t gdt_get_segment_selector (size_t i) {
 	return GDT_SELECTOR_INC * i;
 }
 
+static inline size_t gdt_get_segment_index (segment_selector_t selector) {
+	return selector / GDT_SELECTOR_INC;
+}
+
 static void __attribute__((noinline)) gdt_reload () {
 	// TODO: allow code segement selectors other than 0x08.
 	asm volatile (
