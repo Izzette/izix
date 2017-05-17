@@ -232,8 +232,7 @@ static freemem_region_t freemem_suggest_internal (
 		size_t alignment,
 		int offset
 ) {
-	packed_list_freemem_iterator_t iterator =
-		new_packed_list_freemem_iterator (freemem_entry_list);
+	bintree_freemem_iterator_t iterator = freemem_tree->new_iterator (freemem_tree);
 	bintree_freemem_node_t *entry;
 
 	for (entry = iterator.cur (&iterator); entry; entry = iterator.next (&iterator)) {

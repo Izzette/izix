@@ -89,7 +89,7 @@ void kernel_main (
 		KTHREAD_STACK_SIZE);
 	freemem_internal_region = new_freemem_region (
 		freemem_get_region_end (int_stack_region), // Exclusive max.
-		PAGE_SIZE);
+		8 * PAGE_SIZE);
 
 	freemem_init (freemem_internal_region.p, freemem_internal_region.length);
 
@@ -144,6 +144,7 @@ void kernel_main (
 	enable_int ();
 
 	kthread_init (stack_region);
+
 	kthread_end_task ();
 }
 
