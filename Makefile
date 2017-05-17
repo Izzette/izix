@@ -72,11 +72,11 @@ objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
 objects_mm := $(objects_mm) $(objects_x86_mm)
 endif
 
-objects_sched :=
+objects_sched := mutex.o
 objects_sched := $(addprefix kernel/sched/,$(objects_sched))
 
 objects_sched_asm :=
-objects_sched_asm := $(addprefix kernel/sched/,$(objects_sched))
+objects_sched_asm := $(addprefix kernel/sched/,$(objects_sched_asm))
 
 ifeq (x86,$(ARCH))
 objects_x86_sched := tss.o kthread.o
