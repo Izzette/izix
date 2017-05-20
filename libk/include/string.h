@@ -4,6 +4,7 @@
 #define _IZIX_LIBK_STRING_H 1
 
 #include <stddef.h>
+#include <strings.h>
 
 const void *memchr (const void *, int, size_t);
 
@@ -30,6 +31,36 @@ static inline char *strncpy (char *dest, const char *str, size_t n) {
 
 	return dest;
 }
+
+#define MKFFSX(suffix, parent_suffix, type_prefix, parent_type_prefix) \
+static inline int ffs##suffix (type_prefix int i) { \
+	int bitpos; \
+\
+	bitpos = ffs##parent_suffix (i); \
+	if (bitpos) \
+		return bitpos; \
+\
+	const parent_type_prefix int high_bits = \
+		i >> (8 * sizeof(parent_type_prefix int)); \
+\
+	bitpos = ffs##parent_suffix (high_bits); \
+	if (bitpos) \
+		return bitpos + (8 * sizeof(parent_type_prefix int)); \
+\
+	return 0; \
+}
+
+#if __SIZEOF_INT__ != __SIZEOF_LONG__
+MKFFSX(l, , long, )
+#else
+# define ffsl ffs
+#endif
+
+#if __SIZEOF_LONG__ != __SIZEOF_LONG_LONG__
+MKFFSX(ll, l, long long, long)
+#else
+# define ffsll ffsl
+#endif
 
 #endif
 

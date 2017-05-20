@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #include <collections/bintree.h>
-#include <collections/packed_list.h>
+#include <collections/sparse_collection.h>
 
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
@@ -18,14 +18,43 @@
 //       Perhaps, this should be solved of sooner rather than later ...
 
 TPL_BINTREE (freemem, freemem_region_t)
-TPL_PACKED_LIST(freemem, bintree_freemem_node_t)
+TPL_SPARSE_COLLECTION(freemem, bintree_freemem_node_t)
 
 static bintree_freemem_t freemem_tree_base;
 static bintree_freemem_t *freemem_tree = &freemem_tree_base;
-static packed_list_freemem_t freemem_entry_list_base;
-static packed_list_freemem_t *freemem_entry_list = &freemem_entry_list_base;
+static sparse_collection_freemem_t freemem_entries_base;
+static sparse_collection_freemem_t *freemem_entries = &freemem_entries_base;
 
-static inline bintree_freemem_node_t new_freemem_entry (
+static bool freemem_consecutive_regions (
+		freemem_region_t region1,
+		freemem_region_t region2
+) {
+	freemem_region_t low_region, high_region;
+
+	if (region1.p < region2.p) {
+		low_region = region1;
+		high_region = region2;
+	} else {
+		low_region = region2;
+		high_region = region1;
+	}
+
+	return high_region.p == low_region.p + low_region.length;
+}
+
+static bool freemem_region_subset (
+		freemem_region_t set,
+		freemem_region_t subset
+) {
+	if (!(set.p <= subset.p))
+		return false;
+	if (!(freemem_get_region_end (set) >= freemem_get_region_end (subset)))
+		return false;
+
+	return true;
+}
+
+static bintree_freemem_node_t new_freemem_entry (
 		freemem_region_t region
 ) {
 	bintree_freemem_node_t entry = new_bintree_freemem_node (
@@ -36,65 +65,35 @@ static inline bintree_freemem_node_t new_freemem_entry (
 	return entry;
 }
 
-static inline void freemem_fix_entry (bintree_freemem_node_t *entry) {
+static void freemem_fix_entry (bintree_freemem_node_t *entry) {
 	entry->orderby = (size_t)entry->data.p;
 }
 
-static bool freemem_pre_remove (bintree_freemem_node_t *entry) {
-	freemem_tree->remove (freemem_tree, entry);
-
-	return true;
-}
-
-static bool freemem_post_add (bintree_freemem_node_t *entry) {
-	// Fix the moved entry.
-	freemem_fix_entry (entry);
-	// Then insert it back into the tree.
-	bintree_freemem_node_t *conflict = freemem_tree->insert (freemem_tree, entry);
-	if (conflict) {
-		kputs ("mm/freemem: Failed to do trivial insert while adding entry!\n");
-		kpanic ();
-	}
-
-	return true;
-}
-
-static void freemem_rollback_remove (bintree_freemem_node_t *entry) {
-	// Fix the moved entry.
-	freemem_fix_entry (entry);
-	// Then insert it back into the tree.
-	bintree_freemem_node_t *conflict = freemem_tree->insert (freemem_tree, entry);
-	if (conflict) {
-		kputs (
-			"mm/freemem: Failed to do trivial reinsert "
-			"while rolling back removal of an entry!\n");
-		kpanic ();
-	}
-}
-
-static inline bintree_freemem_node_t *freemem_join_entries (
+static bintree_freemem_node_t *freemem_join_entries (
 		bintree_freemem_node_t *entry1,
 		bintree_freemem_node_t *entry2
 ) {
-	bintree_freemem_node_t joined_entry_base =
-		new_freemem_entry (freemem_join_regions (entry1->data, entry2->data));
+	const size_t new_length = entry1->data.length + entry2->data.length;
+	bintree_freemem_node_t *low_entry, *high_entry;
 
-	const bool remove_first_success =
-		freemem_entry_list->remove_elm (freemem_entry_list, entry1);
-	const bool remove_second_success =
-		freemem_entry_list->remove_elm (freemem_entry_list, entry2);
-	if (!remove_first_success || !remove_second_success) {
-		kputs ("mm/freemem: Failed to do trivial entry removal!\n");
-		kpanic ();
+	if (entry1->data.p < entry2->data.p) {
+		low_entry = entry1;
+		high_entry = entry2;
+	} else {
+		high_entry = entry1;
+		low_entry = entry2;
 	}
 
-	freemem_entry_list->append (freemem_entry_list, joined_entry_base);
+	freemem_tree->remove (freemem_tree, high_entry);
+	freemem_entries->free (freemem_entries, high_entry);
 
-	return freemem_entry_list->get_last (freemem_entry_list);
+	low_entry->data.length = new_length;
+
+	return low_entry;
 }
 
 // returns joined entry, NULL if not joined.
-static inline bintree_freemem_node_t *freemem_maybe_join (
+static bintree_freemem_node_t *freemem_maybe_join (
 		bintree_freemem_node_t *entry1,
 		bintree_freemem_node_t *entry2
 ) {
@@ -106,7 +105,7 @@ static inline bintree_freemem_node_t *freemem_maybe_join (
 
 // Returns the entry that contains the region in the suppied entry,
 // which may be the same pointer and may be the same entry.
-static inline bintree_freemem_node_t *freemem_defrag_entry (bintree_freemem_node_t *entry) {
+static bintree_freemem_node_t *freemem_defrag_entry (bintree_freemem_node_t *entry) {
 	bintree_freemem_iterator_t iterator_base, *iterator = &iterator_base;
 	bintree_freemem_node_t *prev_entry, *next_entry, *new_entry;
 
@@ -134,11 +133,18 @@ static inline bintree_freemem_node_t *freemem_defrag_entry (bintree_freemem_node
 static bool freemem_add_region_internal (freemem_region_t region) {
 	bintree_freemem_node_t entry_base = new_freemem_entry (region);
 
-	const bool add_success = freemem_entry_list->append (freemem_entry_list, entry_base);
-	if (!add_success)
+	const size_t i = freemem_entries->get (freemem_entries);
+	if (!i)
 		return false;
 
-	freemem_defrag_entry (freemem_entry_list->get_last (freemem_entry_list));
+	bintree_freemem_node_t *node = freemem_entries->alloc (freemem_entries, i);
+	*node = entry_base;
+
+	bintree_freemem_node_t *conflict = freemem_tree->insert (freemem_tree, node);
+	if (conflict)
+		return false;
+
+	freemem_defrag_entry (node);
 
 	return true;
 }
@@ -220,8 +226,8 @@ static bool freemem_remove_region_internal (freemem_region_t region) {
 			parent->data.length -= region.length;
 			break;
 		default: // region is superset region.
-			// This will remove the element from the bintree in the pre_remove hook.
-			freemem_entry_list->remove_elm (freemem_entry_list, parent);
+			freemem_tree->remove (freemem_tree, parent);
+			freemem_entries->free (freemem_entries, parent);
 	}
 
 	return true;
@@ -266,12 +272,7 @@ void freemem_init (void *internal, size_t internal_length) {
 	kthread_lock_task ();
 
 	freemem_tree_base = new_bintree_freemem ();
-	freemem_entry_list_base = new_packed_list_freemem (
-		internal,
-		internal_length / sizeof(bintree_freemem_node_t),
-		freemem_pre_remove,
-		freemem_rollback_remove,
-		freemem_post_add);
+	freemem_entries_base = new_sparse_collection_freemem (internal, internal_length);
 
 	kthread_unlock_task ();
 

@@ -118,15 +118,23 @@ endif
 objects_libk_string := memchr.o memcpy.o memset.o strcat.o strlen.o
 objects_libk_string := $(addprefix libk/string/,$(objects_libk_string))
 
+# libk strings objects
+objects_libk_strings := ffs.o
+objects_libk_strings := $(addprefix libk/strings/,$(objects_libk_strings))
+
 # libk format objects
 objects_libk_format := pad.o itoa.o sprintf.o
 objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
 
-objects_libk_collections := bintree.o packed_list.o linked_list.o
+objects_libk_collections := bintree.o linked_list.o sparse_collection.o
 objects_libk_collections := $(addprefix libk/collections/,$(objects_libk_collections))
 
 # All Libk format objects
-objects_libk := $(objects_libk_string) $(objects_libk_format) $(objects_libk_collections)
+objects_libk := \
+	$(objects_libk_string) \
+	$(objects_libk_strings) \
+	$(objects_libk_format) \
+	$(objects_libk_collections)
 
 # Libk library
 libk := libk.a
