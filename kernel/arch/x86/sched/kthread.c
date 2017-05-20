@@ -130,7 +130,7 @@ static inline kpid_t kthread_pop_free_kpid () {
 	if (!kpid_parent_node)
 		return -1;
 
-	if (last_kpid > (kpid_t)kpid_parent_node->node.orderby) {
+	if (last_kpid > (kpid_t)kpid_parent_node->orderby) {
 		bintree_kpid_iterator_t iterator_base, *iterator = &iterator_base;
 
 		iterator_base = kpids_free->new_iterator ((bintree_kpid_t *)kpids_free);
@@ -142,7 +142,7 @@ static inline kpid_t kthread_pop_free_kpid () {
 	}
 
 	bintree_kpid_node_t *kpid_node = kpid_parent_node;
-	kpid_t kpid = kpid_node->node.orderby;
+	kpid_t kpid = kpid_node->orderby;
 
 	kpids_free->remove ((bintree_kpid_t *)kpids_free, kpid_node);
 	free (kpid_node);

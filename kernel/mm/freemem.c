@@ -37,7 +37,7 @@ static inline bintree_freemem_node_t new_freemem_entry (
 }
 
 static inline void freemem_fix_entry (bintree_freemem_node_t *entry) {
-	entry->node.orderby = (size_t)entry->data.p;
+	entry->orderby = (size_t)entry->data.p;
 }
 
 static bool freemem_pre_remove (bintree_freemem_node_t *entry) {
