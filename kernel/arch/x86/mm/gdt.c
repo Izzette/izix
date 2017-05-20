@@ -18,7 +18,7 @@
 
 static gdt_register_t *gdtr;
 
-static inline gdt32_logical_register_t get_logical_gdtr (gdt_register_t registry) {
+static gdt32_logical_register_t get_logical_gdtr (gdt_register_t registry) {
 	gdt32_logical_register_t logical_registry;
 
 	gdt32_register_decode (registry, &logical_registry);
@@ -26,7 +26,7 @@ static inline gdt32_logical_register_t get_logical_gdtr (gdt_register_t registry
 	return logical_registry;
 }
 
-static inline gdt32_logical_entry_t get_logical_entry (gdt32_entry_t entry)  {
+static gdt32_logical_entry_t get_logical_entry (gdt32_entry_t entry)  {
 	gdt32_logical_entry_t logical_entry;
 
 	gdt32_decode (entry, &logical_entry);
@@ -34,13 +34,13 @@ static inline gdt32_logical_entry_t get_logical_entry (gdt32_entry_t entry)  {
 	return logical_entry;
 }
 
-static inline void print_logical_gdtr (gdt32_logical_register_t logical_registry) {
+static void print_logical_gdtr (gdt32_logical_register_t logical_registry) {
 	kprintf ("mm/gdt: size=%u offset=%p\n",
 		logical_registry.size,
 		logical_registry.offset);
 }
 
-static inline void print_logical_entry (gdt32_logical_entry_t logical_entry) {
+static void print_logical_entry (gdt32_logical_entry_t logical_entry) {
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	kprintf ("mm/gdt: limit=0x%05x base=%p\n",
 		logical_entry.limit,
@@ -58,28 +58,28 @@ static inline void print_logical_entry (gdt32_logical_entry_t logical_entry) {
 		logical_entry.flags.granularity ? "GR" : "--");
 }
 
-static inline void print_logical_tss (gdt32_logical_entry_t logical_entry) {
+static void print_logical_tss (gdt32_logical_entry_t logical_entry) {
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	kprintf ("mm/gdt: TSS=%p\n", (void *)logical_entry.base);
 #pragma GCC diagnostic pop
 }
 
-static inline gdt_access_t gdt_get_access_byte (gdt32_entry_t entry) {
+static gdt_access_t gdt_get_access_byte (gdt32_entry_t entry) {
 	return (entry & GDT_ACCESS_DEMASK) >> GDT_ACCESS_OFFSET;
 }
 
-static inline gdt32_flags_t gdt_get_flags (gdt32_entry_t entry) {
+static gdt32_flags_t gdt_get_flags (gdt32_entry_t entry) {
 	return (entry & GDT_FLAGS_DEMASK) >> GDT_FLAGS_OFFSET;
 }
 
-static inline bool gdt_is_null (gdt32_entry_t entry) {
+static bool gdt_is_null (gdt32_entry_t entry) {
 	return 0 == entry;
 }
 
 static bool gdt_is_tss (gdt32_entry_t);
 
 #define MKGDT_IS_EXEC(name, oper) \
-static inline bool gdt_is_##name (gdt32_entry_t entry) { \
+static bool gdt_is_##name (gdt32_entry_t entry) { \
 	if (gdt_is_null (entry) || gdt_is_tss (entry)) \
 		return false; \
 \
@@ -95,17 +95,13 @@ static inline bool gdt_is_##name (gdt32_entry_t entry) { \
 MKGDT_IS_EXEC(code, )
 MKGDT_IS_EXEC(data, !)
 
-static inline bool gdt_is_tss (gdt32_entry_t entry) {
+static bool gdt_is_tss (gdt32_entry_t entry) {
 	return (GDT_TSS_ACCESS_BYTE == gdt_get_access_byte (entry) &&
 			GDT_TSS_FLAGS       == gdt_get_flags       (entry));
 }
 
-static inline segment_selector_t gdt_get_segment_selector (size_t i) {
+static segment_selector_t gdt_get_segment_selector (size_t i) {
 	return GDT_SELECTOR_INC * i;
-}
-
-static inline size_t gdt_get_segment_index (segment_selector_t selector) {
-	return selector / GDT_SELECTOR_INC;
 }
 
 static void __attribute__((noinline)) gdt_reload () {
