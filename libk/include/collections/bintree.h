@@ -94,7 +94,7 @@ typedef struct bintree_##name##_iterator_struct { \
 	bintree_##name##_node_t *(*next) (bintree_##name##_iterator_t *); \
 	bintree_##name##_node_t *(*prev) (bintree_##name##_iterator_t *); \
 	void (*reset) (bintree_##name##_iterator_t *); \
-} bintree_##name##_iterator_t; \
+} __attribute__((__may_alias__)) bintree_##name##_iterator_t; \
 \
 static inline bintree_##name##_iterator_t new_bintree_##name##_iterator ( \
 		bintree_##name##_node_t *node \
@@ -112,7 +112,7 @@ typedef struct bintree_##name##_sub_struct { \
 	bintree_##name##_node_t *(*min) (bintree_##name##_sub_t *); \
 	bintree_##name##_node_t *(*max) (bintree_##name##_sub_t *); \
 	bintree_##name##_node_t *(*search) (bintree_##name##_sub_t *, size_t); \
-} bintree_##name##_sub_t; \
+} __attribute__((__may_alias__)) bintree_##name##_sub_t; \
 \
 static inline bintree_##name##_sub_t new_bintree_##name##_sub (bintree_##name##_node_t *node) { \
 	bintree_sub_t generic_subtree = new_bintree_sub ((bintree_node_t *)node); \
@@ -129,7 +129,7 @@ typedef struct bintree_##name##_struct { \
 	bintree_##name##_node_t *(*insert) (bintree_##name##_t *, bintree_##name##_node_t *); \
 	void (*remove) (bintree_##name##_t *, bintree_##name##_node_t *); \
 	bintree_##name##_iterator_t (*new_iterator) (bintree_##name##_t *); \
-} bintree_##name##_t; \
+} __attribute__((__may_alias__)) bintree_##name##_t; \
 \
 static inline bintree_##name##_t new_bintree_##name () { \
 	bintree_t generic_tree = new_bintree (); \

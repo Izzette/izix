@@ -31,7 +31,7 @@ typedef struct sparse_collection_##name##_struct { \
 	void *(*alloc) (sparse_collection_##name##_t *, size_t); \
 	bool (*insert) (sparse_collection_##name##_t *, const type *); \
 	void (*free) (sparse_collection_##name##_t *, const void *); \
-} sparse_collection_##name##_t; \
+} __attribute__((__may_alias__)) sparse_collection_##name##_t; \
 \
 static inline sparse_collection_##name##_t new_sparse_collection_##name ( \
 	void *data, \
