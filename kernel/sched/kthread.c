@@ -1,23 +1,18 @@
-// kernel/arch/x86/sched/kthread.c
+// kernel/sched/kthread.c
 
-#include <stddef.h>
-#include <stdbool.h>
-
-#include <string.h>
-#include <collections/bintree.h>
 #include <collections/linked_list.h>
+#include <collections/bintree.h>
 
-#include <asm/halt.h>
-#include <mm/freemem.h>
 #include <mm/malloc.h>
-#include <mm/page.h>
-#include <kpanic/kpanic.h>
 #include <kprint/kprint.h>
-#include <sched/kthread_switch.h>
-#include <sched/kthread_bootstrap.h>
-#include <sched/kthread.h>
+#include <kpanic/kpanic.h>
+#include <asm/halt.h>
 #include <sched/spinlock.h>
-#include <irq/irq.h>
+#include <sched/kthread_kpid.h>
+#include <sched/kthread_task.h>
+#include <sched/kthread_preempt.h>
+
+#define KTHREAD_MAIN_KPID 2
 
 typedef struct kthread_lock_struct {
 	spinlock_t spinlock;
@@ -28,9 +23,35 @@ typedef struct kthread_struct {
 	kpid_t kpid;
 	kpid_t parent;
 	freemem_region_t stack_region;
-	kthread_registers_t task;
+	kthread_task_t task;
 	kthread_lock_t lock;
 } kthread_t;
+
+static kthread_lock_t new_kthread_lock () {
+	kthread_lock_t lock = {
+		.spinlock = new_spinlock (),
+		.depth = 0
+	};
+
+	return lock;
+}
+
+static kthread_t new_kthread (
+		kpid_t kpid,
+		kpid_t parent,
+		freemem_region_t stack_region,
+		kthread_task_t task
+) {
+	kthread_t kthread = {
+		.kpid = kpid,
+		.parent = parent,
+		.stack_region = stack_region,
+		.task = task,
+		.lock = new_kthread_lock (),
+	};
+
+	return kthread;
+}
 
 typedef struct __attribute__((packed)) zero_width_struct {
 } zero_width_t;
@@ -62,42 +83,23 @@ volatile linked_list_kthread_node_t *volatile kthread_running_node = NULL;
 volatile kpid_t kthread_destroy_task_kpid = -1;
 volatile kpid_t kthread_idle_task_kpid = -1;
 
-static inline kthread_t new_kthread (
-		kpid_t kpid,
-		kpid_t parent,
-		freemem_region_t stack_region
-) {
-	kthread_t kthread = {
-		.kpid = kpid,
-		.parent = parent,
-		.stack_region = stack_region,
-		.task = new_kthread_task (freemem_region_end (stack_region)),
-		.lock = {
-			.spinlock = new_spinlock (),
-			.depth = 0
-		},
-	};
-
-	return kthread;
-}
-
-static inline volatile kthread_t *kthread_get_running_thread () {
+static volatile kthread_t *kthread_get_running_thread () {
 	return &kthread_running_node->data;
 }
 
-static inline volatile kthread_registers_t *kthread_get_running_task () {
+static volatile kthread_registers_t *kthread_get_running_task () {
 	volatile kthread_t *kthread_running_thread = kthread_get_running_thread ();
 
 	return &kthread_running_thread->task;
 }
 
-static inline volatile kthread_lock_t *kthread_get_running_lock () {
+static volatile kthread_lock_t *kthread_get_running_lock () {
 	volatile kthread_t *kthread_running_thread = kthread_get_running_thread ();
 
 	return &kthread_running_thread->lock;
 }
 
-static inline freemem_region_t kthread_stack_alloc () {
+static freemem_region_t kthread_stack_alloc () {
 	freemem_region_t stack_region = freemem_suggest (KTHREAD_STACK_SIZE, PAGE_SIZE, 0);
 	if (!stack_region.length)
 		return new_freemem_region (NULL, 0);
@@ -113,7 +115,7 @@ static inline freemem_region_t kthread_stack_alloc () {
 	return stack_region;
 }
 
-static inline void kthread_stack_free (freemem_region_t stack_region) {
+static void kthread_stack_free (freemem_region_t stack_region) {
 	const bool add_success = freemem_add_region (stack_region);
 	if (!add_success) {
 		kputs ("sched/kthread: Failed to deallocate kthread stack region!\n");
@@ -121,7 +123,7 @@ static inline void kthread_stack_free (freemem_region_t stack_region) {
 	}
 }
 
-static inline kpid_t kthread_pop_free_kpid () {
+static kpid_t kthread_pop_free_kpid () {
 	static kpid_t last_kpid = 1;
 
 	bintree_kpid_node_t *kpid_parent_node = kpids_free->search (
@@ -152,9 +154,10 @@ static inline kpid_t kthread_pop_free_kpid () {
 	return kpid;
 }
 
-static inline linked_list_kthread_node_t *kthread_create_thread (
+static linked_list_kthread_node_t *kthread_create_thread (
 		kpid_t kpid,
-		kpid_t parent
+		kpid_t parent,
+		void (*entry) ()
 ) {
 	freemem_region_t stack_region = kthread_stack_alloc ();
 	if (!stack_region.length) {
@@ -162,7 +165,9 @@ static inline linked_list_kthread_node_t *kthread_create_thread (
 		kpanic ();
 	}
 
-	kthread_t kthread = new_kthread (kpid, parent, stack_region);
+	kthread_task_t task = new_kthread_task (entry, freemem_region_end (stack_region));
+
+	kthread_t kthread = new_kthread (kpid, parent, stack_region, task);
 
 	linked_list_kthread_node_t *kthread_node =
 		malloc (sizeof(linked_list_kthread_node_t));
@@ -176,23 +181,26 @@ static inline linked_list_kthread_node_t *kthread_create_thread (
 	return kthread_node;
 }
 
-static inline linked_list_kthread_node_t *kthread_create_main_thread (
+static linked_list_kthread_node_t *kthread_create_main_thread (
 		freemem_region_t main_stack_region
 ) {
-	linked_list_kthread_node_t *main_kthread_node =
+	kthread_task_t main_task = new_kthread_task_from_running ();
+
+	kthread_t kthread = new_kthread (KTHREAD_MAIN_KPID, 0, main_stack_region, main_task);
+
+	linked_list_kthread_node_t *kthread_node =
 		malloc (sizeof(linked_list_kthread_node_t));
-	if (!main_kthread_node) {
+	if (!kthread_node) {
 		kputs ("sched/kthread: Failed to allocate main kthread!\n");
 		kpanic ();
 	}
 
-	kthread_t main_kthread = new_kthread (0, -1, main_stack_region);
-	*main_kthread_node = new_linked_list_kthread_node (main_kthread);
+	*kthread_node = new_linked_list_kthread_node (kthread);
 
-	return main_kthread_node;
+	return kthread_node;
 }
 
-static inline bintree_kpid_node_t *kthread_kpid_node_alloc (kpid_t kpid) {
+static bintree_kpid_node_t *kthread_kpid_node_alloc (kpid_t kpid) {
 	bintree_kpid_node_t *kpid_node = malloc (sizeof(bintree_kpid_node_t));
 	if (!kpid_node) {
 		kputs ("sched/kthread: Failed to allocate free kpid entry!\n");
@@ -205,7 +213,7 @@ static inline bintree_kpid_node_t *kthread_kpid_node_alloc (kpid_t kpid) {
 }
 
 // Must already be out of kthreads_active/blocking queue and into kthreads_destroy queue.
-static inline void kthread_destroy_thread (linked_list_kthread_node_t *kthread_node) {
+static void kthread_destroy_thread (linked_list_kthread_node_t *kthread_node) {
 	// Free stack ASAP
 	kthread_stack_free (kthread_node->data.stack_region);
 
@@ -219,7 +227,7 @@ static inline void kthread_destroy_thread (linked_list_kthread_node_t *kthread_n
 	kpids_free->insert ((bintree_kpid_t *)kpids_free, kpid_node);
 }
 
-static inline void kthread_next_task (volatile kthread_registers_t *this_task) {
+static void kthread_next_task (volatile kthread_registers_t *this_task) {
 	volatile linked_list_kthread_node_t *next_kthread_node =
 		kthreads_active->pop ((linked_list_kthread_t *)kthreads_active);
 
@@ -253,11 +261,11 @@ static inline void kthread_next_task (volatile kthread_registers_t *this_task) {
 	}
 }
 
-static inline void kthread_fill_free_kpids () {
+static void kthread_fill_free_kpids () {
 	kpid_t kpid;
 
 	// Skip kernel main and init.
-	for (kpid = 2; KTHREAD_MAX_PROCS > kpid; ++kpid) {
+	for (kpid = 3; KTHREAD_MAX_PROCS > kpid; ++kpid) {
 		bintree_kpid_node_t kpid_node_base, *kpid_node = &kpid_node_base;
 		kpid_node = kthread_kpid_node_alloc (kpid);
 		kpids_free->insert ((bintree_kpid_t *)kpids_free, kpid_node);
@@ -265,7 +273,7 @@ static inline void kthread_fill_free_kpids () {
 
 }
 
-static inline void kthread_add_blocking_task (
+static void kthread_add_blocking_task (
 		volatile linked_list_kthread_node_t *kthread_node
 ) {
 	bintree_kthread_node_t *kthread_blocking_node =
@@ -283,21 +291,6 @@ static inline void kthread_add_blocking_task (
 		(bintree_kthread_t *)kthreads_blocking,
 		kthread_blocking_node);
 }
-
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-static void kthread_pit_825x_irq0_hook (irq_t irq) {
-	// If we can't obtain the exclusive lock, we return to the task because switching
-	// isn't safe or desirable for the currently running thread.
-	if (!kthread_lock_task ()) {
-		kthread_unlock_task ();
-		return;
-	}
-
-	kthread_yield ();
-
-	kthread_unlock_task ();
-}
-#pragma GCC diagnostic pop
 
 static void kthread_background_task_idle () {
 	kputs ("sched/kthread: Started idle background task.\n");
@@ -384,8 +377,7 @@ void kthread_init (freemem_region_t main_stack_region) {
 		kpanic ();
 	}
 
-	// Switch tasks on PIT 8253/8254 IRQ0.
-	irq_add_post_hook (0, kthread_pit_825x_irq0_hook);
+	kthread_preempt_enable ();
 
 	kputs ("sched/kthread: Successfully initialized kthreads.\n");
 }
@@ -394,7 +386,7 @@ bool kthread_is_init () {
 	return kthread_init_record;
 }
 
-kpid_t kthread_new_task (void (*task) ()) {
+kpid_t kthread_new_task (void (*entry) ()) {
 	kthread_lock_task ();
 
 	kpid_t new_kpid = kthread_pop_free_kpid ();
@@ -402,16 +394,7 @@ kpid_t kthread_new_task (void (*task) ()) {
 		return -1;
 
 	linked_list_kthread_node_t *new_kthread_node =
-		kthread_create_thread (new_kpid, kthread_get_running_kpid ());
-
-	volatile kthread_registers_t *new_task = &new_kthread_node->data.task;
-
-	// Our bootstrap code, the "glue" that keeps the stack back traceable.
-#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-	kthread_task_pushl ((kthread_registers_t *)new_task, (uint32_t)task);
-#pragma GCC diagnostic pop
-	kthread_task_pushl ((kthread_registers_t *)new_task, 0);
-	kthread_task_push_caller ((kthread_registers_t *)new_task, kthread_bootstrap);
+		kthread_create_thread (new_kpid, kthread_get_running_kpid (), entry);
 
 	kthreads_active->append ((linked_list_kthread_t *)kthreads_active, new_kthread_node);
 
@@ -421,10 +404,11 @@ kpid_t kthread_new_task (void (*task) ()) {
 }
 
 // Start task in the blocking state.
-kpid_t kthread_new_blocking_task (void (*task) ()) {
+kpid_t kthread_new_blocking_task (void (*entry) ()) {
 	kthread_lock_task ();
 
-	kpid_t new_blocking_kpid = kthread_new_task (task);
+	kpid_t new_blocking_kpid = kthread_new_task (entry);
+
 	// Guaranteed to be at end of active queue.
 	linked_list_kthread_node_t *new_blocking_kthread_node =
 		kthreads_active->popEnd ((linked_list_kthread_t *)kthreads_active);

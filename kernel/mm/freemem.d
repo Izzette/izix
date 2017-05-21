@@ -4,4 +4,4 @@ kernel/mm/freemem.o: \
 		kernel/include/mm/freemem.h \
 		kernel/include/kpanic/kpanic.h \
 		kernel/include/kprint/kprint.h \
-		kernel/arch/$(ARCH)/include/sched/kthread.h
+		kernel/include/sched/kthread.h

@@ -72,14 +72,14 @@ objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
 objects_mm := $(objects_mm) $(objects_x86_mm)
 endif
 
-objects_sched := mutex.o
+objects_sched := mutex.o kthread.o
 objects_sched := $(addprefix kernel/sched/,$(objects_sched))
 
 objects_sched_asm :=
 objects_sched_asm := $(addprefix kernel/sched/,$(objects_sched_asm))
 
 ifeq (x86,$(ARCH))
-objects_x86_sched := tss.o kthread.o
+objects_x86_sched := tss.o kthread_task.o kthread_preempt.o
 objects_x86_sched := $(addprefix kernel/arch/$(ARCH)/sched/,$(objects_x86_sched))
 objects_sched := $(objects_sched) $(objects_x86_sched)
 objects_x86_sched_asm := kthread_switch.o kthread_bootstrap.o

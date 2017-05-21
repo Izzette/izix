@@ -42,58 +42,58 @@ typedef struct kthread_registers_struct {
 	uint32_t eax;
 } kthread_registers_t;
 
-static inline void kthread_task_pushw (
-		kthread_registers_t *task,
+static inline void kthread_registers_pushw (
+		kthread_registers_t *registers,
 		uint16_t w
 ) {
 	//    pushw   <w>
-	task->esp -= sizeof(uint16_t);
-	*(uint16_t *)task->esp = w;
+	registers->esp -= sizeof(uint16_t);
+	*(uint16_t *)registers->esp = w;
 }
 
-static inline void kthread_task_pushl (
-		kthread_registers_t *task,
+static inline void kthread_registers_pushl (
+		kthread_registers_t *registers,
 		uint32_t dw
 ) {
 	//    pushl   <dw>
-	task->esp -= sizeof(uint32_t);
-	*(uint32_t *)task->esp = dw;
+	registers->esp -= sizeof(uint32_t);
+	*(uint32_t *)registers->esp = dw;
 }
 
-static inline void kthread_task_pushq (
-		kthread_registers_t *task,
+static inline void kthread_registers_pushq (
+		kthread_registers_t *registers,
 		uint32_t qw
 ) {
 	//    pushq   <qw>
-	task->esp -= sizeof(uint64_t);
-	*(uint64_t *)task->esp = qw;
+	registers->esp -= sizeof(uint64_t);
+	*(uint64_t *)registers->esp = qw;
 }
 
-static inline void kthread_task_push_caller (
-		kthread_registers_t *task,
+static inline void kthread_registers_push_caller (
+		kthread_registers_t *registers,
 		void *caller
 ) {
 #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 	// caller:
 	//    call    <...>
-	kthread_task_pushl (task, (uint32_t)caller);
+	kthread_registers_pushl (registers, (uint32_t)caller);
 #pragma GCC diagnostic pop
 }
 
-static inline void kthread_task_push_frame (
-		kthread_registers_t *task
+static inline void kthread_registers_push_frame (
+		kthread_registers_t *registers
 ) {
 #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 	//    push    %ebp
-	kthread_task_pushl (task, (uint32_t)task->ebp);
+	kthread_registers_pushl (registers, (uint32_t)registers->ebp);
 #pragma GCC diagnostic pop
 
 	//    mov     %esp,    %ebp
-	task->ebp = task->esp;
+	registers->ebp = registers->esp;
 }
 
-static inline kthread_registers_t new_kthread_task (void *stack_bottom) {
-	kthread_registers_t task = {
+static inline kthread_registers_t new_kthread_registers (void *stack_bottom) {
+	kthread_registers_t registers = {
 		.eflags = {
 			.cflg  = 0,
 			._rsv0 = 1, // always 1
@@ -127,7 +127,7 @@ static inline kthread_registers_t new_kthread_task (void *stack_bottom) {
 		.eax = 0
 	};
 
-	return task;
+	return registers;
 }
 
 void kthread_switch (

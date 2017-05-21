@@ -4,5 +4,5 @@ kernel/sched/mutex.o: \
 		kernel/include/sched/mutex.h \
 		kernel/include/kprint/kprint.h \
 		kernel/include/kpanic/kpanic.h \
-		kernel/arch/$(ARCH)/include/sched/spinlock.h \
-		kernel/arch/$(ARCH)/include/sched/kthread.h
+		kernel/include/sched/kthread.h \
+		kernel/arch/$(ARCH)/include/sched/spinlock.h
