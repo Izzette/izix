@@ -106,9 +106,10 @@ static inline linked_list_t new_linked_list () {
 }
 
 #define TPL_LINKED_LIST(name, type) \
+typedef struct linked_list_##name##_node_struct linked_list_##name##_node_t; \
 typedef struct linked_list_##name##_node_struct { \
-	linked_list_node_t *prev; \
-	linked_list_node_t *next; \
+	linked_list_##name##_node_t *prev; \
+	linked_list_##name##_node_t *next; \
 	type data; \
 } linked_list_##name##_node_t; \
 \

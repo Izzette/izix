@@ -35,6 +35,11 @@ typedef struct bintree_sub_struct {
 	bintree_node_t *(*search) (bintree_sub_t *, size_t);
 } bintree_sub_t;
 
+typedef struct bintree_fields_struct {
+	bintree_node_t *root;
+	unsigned char last_rm : 1;
+} __attribute__((__may_alias__)) bintree_fields_t;
+
 typedef struct bintree_struct bintree_t;
 typedef struct bintree_struct {
 	bintree_node_t *root;
@@ -44,6 +49,7 @@ typedef struct bintree_struct {
 	bintree_node_t *(*search) (bintree_t *, size_t);
 	bintree_node_t *(*insert) (bintree_t *, bintree_node_t *);
 	void (*remove) (bintree_t *, bintree_node_t *);
+	bintree_fields_t (*get_fields) (bintree_t *);
 	bintree_iterator_t (*new_iterator) (bintree_t *);
 } bintree_t;
 
@@ -58,9 +64,19 @@ static inline bintree_node_t new_bintree_node (size_t orderby) {
 	return node;
 }
 
+static inline bintree_fields_t new_bintree_fields () {
+	bintree_fields_t fields = {
+		.root = NULL,
+		.last_rm = 0
+	};
+
+	return fields;
+}
+
 bintree_iterator_t new_bintree_iterator (bintree_node_t *);
 bintree_sub_t new_bintree_sub (bintree_node_t *);
 bintree_t new_bintree ();
+bintree_t new_bintree_from_fields (bintree_fields_t);
 
 #define TPL_BINTREE(name, type) \
 typedef struct bintree_##name##_node_struct bintree_##name##_node_t; \
@@ -119,6 +135,18 @@ static inline bintree_##name##_sub_t new_bintree_##name##_sub (bintree_##name##_
 \
 	return *(bintree_##name##_sub_t *)&generic_subtree; \
 } \
+\
+typedef struct bintree_##name##_fields_struct { \
+	bintree_##name##_node_t *root; \
+	unsigned char last_rm : 1; \
+} __attribute__((__may_alias__)) bintree_##name##_fields_t; \
+\
+static inline bintree_##name##_fields_t new_bintree_##name##_fields () { \
+	bintree_fields_t generic_fields = new_bintree_fields (); \
+\
+	return *(bintree_##name##_fields_t *)&generic_fields; \
+} \
+\
 typedef struct bintree_##name##_struct bintree_##name##_t; \
 typedef struct bintree_##name##_struct { \
 	bintree_##name##_node_t *root; \
@@ -128,11 +156,20 @@ typedef struct bintree_##name##_struct { \
 	bintree_##name##_node_t *(*search) (bintree_##name##_t *, size_t); \
 	bintree_##name##_node_t *(*insert) (bintree_##name##_t *, bintree_##name##_node_t *); \
 	void (*remove) (bintree_##name##_t *, bintree_##name##_node_t *); \
+	bintree_##name##_fields_t (*get_fields) (bintree_##name##_t *); \
 	bintree_##name##_iterator_t (*new_iterator) (bintree_##name##_t *); \
 } __attribute__((__may_alias__)) bintree_##name##_t; \
 \
 static inline bintree_##name##_t new_bintree_##name () { \
 	bintree_t generic_tree = new_bintree (); \
+\
+	return *(bintree_##name##_t *)&generic_tree; \
+} \
+\
+static inline bintree_##name##_t new_bintree_##name##_from_fields ( \
+		bintree_##name##_fields_t fields \
+) { \
+	bintree_t generic_tree = new_bintree_from_fields (*(bintree_fields_t *)&fields); \
 \
 	return *(bintree_##name##_t *)&generic_tree; \
 }

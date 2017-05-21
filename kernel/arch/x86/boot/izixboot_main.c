@@ -85,11 +85,11 @@ void kernel_main (
 		stack_start,
 		stack_length);
 	int_stack_region = new_freemem_region (
-		freemem_get_region_end (kernel_region), // Exclusive max.
+		freemem_region_end (kernel_region), // Exclusive max.
 		KTHREAD_STACK_SIZE);
 	freemem_internal_region = new_freemem_region (
-		freemem_get_region_end (int_stack_region), // Exclusive max.
-		8 * PAGE_SIZE);
+		freemem_region_end (int_stack_region), // Exclusive max.
+		9 * PAGE_SIZE);
 
 	freemem_init (freemem_internal_region.p, freemem_internal_region.length);
 
@@ -102,7 +102,7 @@ void kernel_main (
 
 	gdt_register (gdtr);
 
-	tss_init (freemem_get_region_end (int_stack_region));
+	tss_init (freemem_region_end (int_stack_region));
 	segment_selector_t tss_segment = gdt_add_tss (tss_get ());
 
 	gdt_dump_entries ();

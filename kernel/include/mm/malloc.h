@@ -15,7 +15,8 @@ typedef struct {
 } __malloc_max_align_t;
 #endif
 
-#define MALLOC_ALIGNMENT alignof(__malloc_max_align_t)
+// 8-or-so really isn't enough to fit many data structures into, 64-or-so is much better.
+#define MALLOC_ALIGNMENT (alignof(__malloc_max_align_t) * alignof(__malloc_max_align_t))
 
 void *malloc (size_t)
 	__attribute__((malloc));

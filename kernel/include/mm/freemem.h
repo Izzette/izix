@@ -21,7 +21,7 @@ static inline freemem_region_t new_freemem_region (void *p, size_t length) {
 }
 
 // Exclusive
-static inline void *freemem_get_region_end (freemem_region_t region) {
+static inline void *freemem_region_end (freemem_region_t region) {
 	return region.p + region.length;
 }
 

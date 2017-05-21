@@ -71,7 +71,7 @@ static inline kthread_t new_kthread (
 		.kpid = kpid,
 		.parent = parent,
 		.stack_region = stack_region,
-		.task = new_kthread_task (freemem_get_region_end (stack_region)),
+		.task = new_kthread_task (freemem_region_end (stack_region)),
 		.lock = {
 			.spinlock = new_spinlock (),
 			.depth = 0
@@ -212,6 +212,7 @@ static inline void kthread_destroy_thread (linked_list_kthread_node_t *kthread_n
 	kpid_t kpid = kthread_node->data.kpid;
 
 	kthreads_destroy->removeNode ((linked_list_kthread_t *)kthreads_destroy, kthread_node);
+	free (kthread_node);
 
 	bintree_kpid_node_t *kpid_node = kthread_kpid_node_alloc (kpid);
 

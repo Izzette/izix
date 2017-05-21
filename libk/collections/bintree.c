@@ -309,6 +309,15 @@ static bintree_iterator_t new_bintree_iterator_from_tree (bintree_t *this) {
 	return new_bintree_iterator (this->min (this));
 }
 
+static bintree_fields_t bintree_get_fields (bintree_t *this) {
+	bintree_fields_t fields = new_bintree_fields ();
+
+	fields.root = this->root;
+	fields.last_rm = this->last_rm;
+
+	return fields;
+}
+
 bintree_t new_bintree () {
 	bintree_t tree = {
 		.root = NULL,
@@ -318,8 +327,18 @@ bintree_t new_bintree () {
 		.search = bintree_search,
 		.insert = bintree_insert,
 		.remove = bintree_remove,
+		.get_fields = bintree_get_fields,
 		.new_iterator = new_bintree_iterator_from_tree,
 	};
+
+	return tree;
+}
+
+bintree_t new_bintree_from_fields (bintree_fields_t fields) {
+	bintree_t tree = new_bintree ();
+
+	tree.root = fields.root;
+	tree.last_rm = fields.last_rm;
 
 	return tree;
 }

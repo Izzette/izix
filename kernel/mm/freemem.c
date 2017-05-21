@@ -17,15 +17,154 @@
 //       to occur, it would realistically result of the loss of a complete page of memory.
 //       Perhaps, this should be solved of sooner rather than later ...
 
-TPL_BINTREE (freemem, freemem_region_t)
-TPL_SPARSE_COLLECTION(freemem, bintree_freemem_node_t)
+typedef struct __attribute__((packed)) freemem_zero_width_struct {
+} freemem_zero_width_t;
 
-static bintree_freemem_t freemem_tree_base;
-static bintree_freemem_t *freemem_tree = &freemem_tree_base;
-static sparse_collection_freemem_t freemem_entries_base;
-static sparse_collection_freemem_t *freemem_entries = &freemem_entries_base;
+TPL_BINTREE (region, size_t)
+TPL_BINTREE (p, freemem_zero_width_t)
+TPL_BINTREE (length, bintree_p_fields_t)
 
-static bool freemem_consecutive_regions (
+TPL_SPARSE_COLLECTION(region_node, bintree_region_node_t)
+TPL_SPARSE_COLLECTION(p_node, bintree_p_node_t)
+TPL_SPARSE_COLLECTION(length_node, bintree_length_node_t)
+
+static bintree_region_t
+	region_tree_base,
+	*region_tree = &region_tree_base;
+static bintree_length_t
+	length_tree_base,
+	*length_tree = &length_tree_base;
+
+static sparse_collection_region_node_t
+	region_nodes_base,
+	*region_nodes = &region_nodes_base;
+static sparse_collection_p_node_t
+	p_nodes_base,
+	*p_nodes = &p_nodes_base;
+static sparse_collection_length_node_t
+	length_nodes_base,
+	*length_nodes = &length_nodes_base;
+
+// Panics if perfect matches cannot be found.
+static bintree_region_node_t *freemem_get_nodes (
+		freemem_region_t region,
+		bintree_length_node_t **length_node_ptr,
+		bintree_p_node_t **p_node_ptr) {
+	bintree_region_node_t *region_node;
+	bintree_p_t p_tree_base, *p_tree = &p_tree_base;
+
+	region_node = region_tree->search (region_tree, (size_t)region.p);
+	*length_node_ptr = length_tree->search (length_tree, region.length);
+
+	if (!region_node ||
+			(size_t)region.p != region_node->orderby ||
+			region.length != region_node->data) {
+		kputs ("mm/freemem: Failed to find matching region node!\n");
+		kpanic ();
+	}
+
+	if (!*length_node_ptr ||
+			region.length != (*length_node_ptr)->orderby) {
+		kputs ("mm/freemem: Failed to find matching length node!\n");
+		kpanic ();
+	}
+
+	p_tree_base = new_bintree_p_from_fields ((*length_node_ptr)->data);
+
+	*p_node_ptr = p_tree->search (p_tree, (size_t)region.p);
+
+	if (!*p_node_ptr ||
+			(size_t)region.p != (*p_node_ptr)->orderby) {
+		kputs ("mm/freemem: Failed to find matching p node!\n");
+		kpanic ();
+	}
+
+	return region_node;
+}
+
+static void freemem_delete (freemem_region_t region) {
+	bintree_region_node_t *region_node;
+	bintree_length_node_t *length_node;
+	bintree_p_node_t *p_node;
+	bintree_p_t p_tree_base, *p_tree = &p_tree_base;
+
+	region_node = freemem_get_nodes (region, &length_node, &p_node);
+
+	p_tree_base = new_bintree_p_from_fields (length_node->data);
+
+	region_tree->remove (region_tree, region_node);
+	region_nodes->free (region_nodes, region_node);
+	p_tree->remove (p_tree, p_node);
+	p_nodes->free (p_nodes, p_node);
+	if (!p_tree->root) {
+		length_tree->remove (length_tree, length_node);
+		length_nodes->free (length_nodes, length_node);
+	} else {
+		length_node->data = p_tree->get_fields (p_tree);
+	}
+}
+
+static void freemem_insert (freemem_region_t region) {
+	bintree_region_node_t *region_node, *region_conflict;
+	bintree_length_node_t *length_node, *length_conflict;
+	bintree_p_node_t *p_node, *p_conflict;
+	bintree_p_t p_tree_base, *p_tree = &p_tree_base;
+	size_t i;
+
+	i = region_nodes->get (region_nodes);
+	if (!i) {
+		kputs ("mm/freemem: failed to allocate new region node!\n");
+		kpanic ();
+	}
+	region_node = region_nodes->alloc (region_nodes, i);
+
+	i = p_nodes->get (p_nodes);
+	if (!i) {
+		kputs ("mm/freemem: failed to allocate new p node!\n");
+		kpanic ();
+	}
+	p_node = p_nodes->alloc (p_nodes, i);
+
+	*region_node = new_bintree_region_node (region.length, (size_t)region.p);
+	*p_node = new_bintree_p_node ((freemem_zero_width_t){}, (size_t)region.p);
+
+	// Find or allocate length node
+	length_node = length_tree->search (length_tree, region.length);
+	if (!length_node ||
+			region.length != length_node->orderby) {
+		i = length_nodes->get (length_nodes);
+		if (!i) {
+			kputs ("mm/freemem: failed to allocate new length node!\n");
+			kpanic ();
+		}
+		length_node = length_nodes->alloc (length_nodes, i);
+
+		*length_node = new_bintree_length_node (new_bintree_p_fields (), region.length);
+
+		length_conflict = length_tree->insert (length_tree, length_node);
+		if (length_conflict) {
+			kputs ("mm/freemem: failed to insert new length node!\n");
+			kputs ("\tbintree bug?\n");
+			kpanic ();
+		}
+	}
+
+	region_conflict = region_tree->insert (region_tree, region_node);
+	if (region_conflict) {
+		kputs ("mm/freemem: failed to insert new region node!\n");
+		kpanic ();
+	}
+
+	p_tree_base = new_bintree_p_from_fields (length_node->data);
+	p_conflict = p_tree->insert (p_tree, p_node);
+	if (p_conflict) {
+		kputs ("mm/freemem: failed to insert new p node!\n");
+		kpanic ();
+	}
+	length_node->data = p_tree->get_fields (p_tree);
+}
+
+static bool freemem_is_consecutive (
 		freemem_region_t region1,
 		freemem_region_t region2
 ) {
@@ -42,192 +181,161 @@ static bool freemem_consecutive_regions (
 	return high_region.p == low_region.p + low_region.length;
 }
 
-static bool freemem_region_subset (
+static bool freemem_is_subset (
 		freemem_region_t set,
 		freemem_region_t subset
 ) {
 	if (!(set.p <= subset.p))
 		return false;
-	if (!(freemem_get_region_end (set) >= freemem_get_region_end (subset)))
+	if (!(freemem_region_end (set) >= freemem_region_end (subset)))
 		return false;
 
 	return true;
 }
 
-static bintree_freemem_node_t new_freemem_entry (
-		freemem_region_t region
+// Assumed consecutive.
+static freemem_region_t freemem_join (
+		freemem_region_t region1,
+		freemem_region_t region2
 ) {
-	bintree_freemem_node_t entry = new_bintree_freemem_node (
-		region,
-		(size_t)region.p
-	);
+	size_t new_length;
+	void *new_p;
+	freemem_region_t new_region;
 
-	return entry;
+	new_length = region1.length + region2.length;
+	if (region1.p < region2.p)
+		new_p = region1.p;
+	else
+		new_p = region2.p;
+	new_region = new_freemem_region (new_p, new_length);
+
+	freemem_delete (region1);
+	freemem_delete (region2);
+
+	freemem_insert (new_region);
+
+	return new_region;
 }
 
-static void freemem_fix_entry (bintree_freemem_node_t *entry) {
-	entry->orderby = (size_t)entry->data.p;
+// returns joined entry, or new_freemem_region (NULL, 0).
+static freemem_region_t freemem_maybe_join (
+		freemem_region_t region1,
+		freemem_region_t region2
+) {
+	if (!freemem_is_consecutive (region1, region2))
+		return new_freemem_region (NULL, 0);
+
+	return freemem_join (region1, region2);
 }
 
-static bintree_freemem_node_t *freemem_join_entries (
-		bintree_freemem_node_t *entry1,
-		bintree_freemem_node_t *entry2
-) {
-	const size_t new_length = entry1->data.length + entry2->data.length;
-	bintree_freemem_node_t *low_entry, *high_entry;
+static void freemem_defrag (freemem_region_t region) {
+	bintree_region_iterator_t iterator_base, *iterator = &iterator_base;
+	bintree_region_node_t *region_node, *prev_region_node, *next_region_node;
+	freemem_region_t new_region, prev_region, next_region;
 
-	if (entry1->data.p < entry2->data.p) {
-		low_entry = entry1;
-		high_entry = entry2;
-	} else {
-		high_entry = entry1;
-		low_entry = entry2;
+	region_node = region_tree->search (region_tree, (size_t)region.p);
+	if (!region_node) {
+		kputs ("mm/freemem: Failed to find region node while defragmenting!\n");
+		kpanic ();
 	}
 
-	freemem_tree->remove (freemem_tree, high_entry);
-	freemem_entries->free (freemem_entries, high_entry);
-
-	low_entry->data.length = new_length;
-
-	return low_entry;
-}
-
-// returns joined entry, NULL if not joined.
-static bintree_freemem_node_t *freemem_maybe_join (
-		bintree_freemem_node_t *entry1,
-		bintree_freemem_node_t *entry2
-) {
-	if (!freemem_consecutive_regions (entry1->data, entry2->data))
-		return NULL;
-
-	return freemem_join_entries (entry1, entry2);;
-}
-
-// Returns the entry that contains the region in the suppied entry,
-// which may be the same pointer and may be the same entry.
-static bintree_freemem_node_t *freemem_defrag_entry (bintree_freemem_node_t *entry) {
-	bintree_freemem_iterator_t iterator_base, *iterator = &iterator_base;
-	bintree_freemem_node_t *prev_entry, *next_entry, *new_entry;
-
-	iterator_base = new_bintree_freemem_iterator (entry);
+	iterator_base = new_bintree_region_iterator (region_node);
 	if (iterator->prev (iterator)) {
-		prev_entry = iterator->cur (iterator);
+		prev_region_node = iterator->cur (iterator);
+		prev_region = new_freemem_region (
+			(void *)prev_region_node->orderby,
+			prev_region_node->data);
 
-		new_entry = freemem_maybe_join (entry, prev_entry);
-		if (new_entry)
-			entry = new_entry;
+		new_region = freemem_maybe_join (region, prev_region);
+		if (new_region.length) {
+			region = new_region;
+			region_node = region_tree->search (region_tree, (size_t)region.p);
+			if (!region_node) {
+				kputs ("mm/freemem: Failed to find new region while defragmenting!\n");
+				kpanic ();
+			}
+		}
 	}
 
-	iterator_base = new_bintree_freemem_iterator (entry);
+	iterator_base = new_bintree_region_iterator (region_node);
 	if (iterator->next (iterator)) {
-		next_entry = iterator->cur (iterator);
+		next_region_node = iterator->cur (iterator);
+		next_region = new_freemem_region (
+			(void *)next_region_node->orderby,
+			next_region_node->data);
 
-		new_entry = freemem_maybe_join (entry, next_entry);
-		if (new_entry)
-			entry = new_entry;
+		new_region = freemem_maybe_join (region, next_region);
 	}
-
-	return entry;
 }
 
 static bool freemem_add_region_internal (freemem_region_t region) {
-	bintree_freemem_node_t entry_base = new_freemem_entry (region);
-
-	const size_t i = freemem_entries->get (freemem_entries);
-	if (!i)
-		return false;
-
-	bintree_freemem_node_t *node = freemem_entries->alloc (freemem_entries, i);
-	*node = entry_base;
-
-	bintree_freemem_node_t *conflict = freemem_tree->insert (freemem_tree, node);
-	if (conflict)
-		return false;
-
-	freemem_defrag_entry (node);
+	freemem_insert (region);
+	freemem_defrag (region);
 
 	return true;
 }
 
 static bool freemem_remove_region_internal (freemem_region_t region) {
-	bintree_freemem_iterator_t iterator_base, *iterator = &iterator_base;
-	bintree_freemem_node_t *parent;
-	void *region_end, *parent_region_end;
+	bintree_region_iterator_t iterator_base, *iterator = &iterator_base;
+	bintree_region_node_t *parent;
+	freemem_region_t parent_region;
 
-	parent = freemem_tree->search (freemem_tree, (size_t)region.p);
+	parent = region_tree->search (region_tree, (size_t)region.p);
 
 	if (!parent)
 		return false;
 
-	iterator_base = new_bintree_freemem_iterator (parent);
+	iterator_base = new_bintree_region_iterator (parent);
+	if ((size_t)region.p < parent->orderby)
+		parent = iterator->prev (iterator);
+	else {
+		parent_region = new_freemem_region ((void *)parent->orderby, parent->data);
 
-	if (region.p < parent->data.p) {
-		while (parent && region.p < parent->data.p)
-			parent = iterator->prev (iterator);
-
-		if (!parent)
-			return false;
-
-		region_end = freemem_get_region_end (region);
-		parent_region_end = freemem_get_region_end (parent->data);
-	} else {
-		while (parent) {
-			region_end = freemem_get_region_end (region);
-			parent_region_end = freemem_get_region_end (parent->data);
-
-			if (region_end <= parent_region_end)
-				break;
-
+		if (freemem_region_end (region) > freemem_region_end (parent_region))
 			parent = iterator->next (iterator);
-		}
-
-		if (!parent)
-			return false;
 	}
+	if (!parent)
+		return false;
+	parent_region = new_freemem_region ((void *)parent->orderby, parent->data);
 
-	if (!freemem_region_subset (parent->data, region))
+	if (!freemem_is_subset (parent_region, region))
 		return false;
 
 	unsigned char region_facts =
-		(region.p   == parent->data.p    ? 1 : 0) |
-		(region_end == parent_region_end ? 1 : 0) << 1;
-
-	bool region_add_success;
-	size_t old_length;
-	bintree_freemem_node_t *conflict;
+		((region.p == parent_region.p)
+			? 1 : 0) |
+		((freemem_region_end (region) == freemem_region_end (parent_region))
+			? 1 : 0) << 1;
 
 	switch (region_facts) {
 		case 0b00: // region shares no edges with superset.
-			old_length = parent->data.length;
-			parent->data.length = region.p - parent->data.p;
-			region_add_success = freemem_add_region_internal (
+			freemem_delete (parent_region);
+			freemem_insert (
 				new_freemem_region (
-					region_end, (size_t)(parent_region_end - region_end)));
-			if (!region_add_success) {
-				// Rollback.
-				parent->data.length = old_length;
-				return false;
-			}
+					parent_region.p,
+					region.p - parent_region.p));
+			freemem_insert (
+				new_freemem_region (
+					freemem_region_end (region),
+					freemem_region_end (parent_region) - freemem_region_end (region)));
 			break;
 		case 0b01: // region shares the start with superset region.
-			freemem_tree->remove (freemem_tree, parent);
-			parent->data.p += region.length;
-			parent->data.length -= region.length;
-			freemem_fix_entry (parent);
-			conflict = freemem_tree->insert (freemem_tree, parent);
-			if (conflict) {
-				kputs (
-					"mm/freemem: Failed to do trivial reinsert while increasing "
-					"start of free region as part of a remove region operation!\n");
-				kpanic ();
-			}
+			freemem_delete (parent_region);
+			freemem_insert (
+				new_freemem_region (
+					freemem_region_end (region),
+					parent_region.length - region.length));
+
 			break;
 		case 0b10: // region shares the end with superset region.
-			parent->data.length -= region.length;
+			freemem_delete (parent_region);
+			freemem_insert (
+				new_freemem_region (
+					parent_region.p,
+					parent_region.length - region.length));
 			break;
 		default: // region is superset region.
-			freemem_tree->remove (freemem_tree, parent);
-			freemem_entries->free (freemem_entries, parent);
+			freemem_delete (parent_region);
 	}
 
 	return true;
@@ -238,44 +346,92 @@ static freemem_region_t freemem_suggest_internal (
 		size_t alignment,
 		int offset
 ) {
-	bintree_freemem_iterator_t iterator = freemem_tree->new_iterator (freemem_tree);
-	bintree_freemem_node_t *entry;
+	bintree_p_t
+		p_length_tree_base,
+		*p_length_tree = &p_length_tree_base;
+	bintree_length_node_t *length_entry;
+	bintree_p_node_t *p_entry;
+	bintree_length_iterator_t
+		length_iterator_base,
+		*length_iterator = &length_iterator_base;
+	bintree_p_iterator_t
+		p_iterator_base,
+		*p_iterator = &p_iterator_base;
 
-	for (entry = iterator.cur (&iterator); entry; entry = iterator.next (&iterator)) {
-		size_t align_inc;
+	length_entry = length_tree->search (length_tree, length);
+	if (!length_entry)
+		return new_freemem_region (NULL, 0);
 
-		if ((size_t)entry->data.p % alignment)
-			align_inc = alignment - (size_t)entry->data.p % alignment;
-		else
-			align_inc = 0;
+	length_iterator_base = new_bintree_length_iterator (length_entry);
 
-		if (0 <= offset) {
-			align_inc += offset;
-		} else {
-			if ((size_t)(-1 * offset) > align_inc)
-				align_inc += alignment;
-			align_inc -= -1 * offset;
-		}
-
-		if (length + align_inc > entry->data.length)
-			continue;
-
-		return new_freemem_region (
-			entry->data.p + align_inc,
-			length);
+	if (length > length_entry->orderby) {
+		length_entry = length_iterator->next (length_iterator);
+		if (!length_entry)
+			return new_freemem_region (NULL, 0);
 	}
 
-	return new_freemem_region ((void *)0x0, 0);
+	do {
+		size_t align_inc;
+
+		p_length_tree_base = new_bintree_p_from_fields (length_entry->data);
+		p_iterator_base = p_length_tree->new_iterator (p_length_tree);
+
+		p_entry = p_iterator->cur (p_iterator);
+		while (p_entry) {
+			if ((size_t)p_entry->orderby % alignment)
+				align_inc = alignment - (size_t)p_entry->orderby % alignment;
+			else
+				align_inc = 0;
+
+			if (0 <= offset) {
+				align_inc += offset;
+			} else {
+				if ((size_t)(-1 * offset) > align_inc)
+					align_inc += alignment;
+				align_inc -= -1 * offset;
+			}
+
+			if (length + align_inc <= length_entry->orderby)
+				return new_freemem_region (
+					(void *)p_entry->orderby + align_inc,
+					length);
+
+			p_entry = p_iterator->next (p_iterator);
+		}
+
+		length_entry = length_iterator->next (length_iterator);
+	} while (length_entry);
+
+	return new_freemem_region (NULL, 0);
 }
 
 void freemem_init (void *internal, size_t internal_length) {
 	kthread_lock_task ();
 
-	freemem_tree_base = new_bintree_freemem ();
-	freemem_entries_base = new_sparse_collection_freemem (internal, internal_length);
+	region_tree_base = new_bintree_region ();
+	length_tree_base = new_bintree_length ();
+
+	size_t total_size =
+		4 * sizeof(bintree_region_node_t) +
+		sizeof(bintree_length_node_t) +
+		4 * sizeof(bintree_p_node_t);
+
+	void *next_data = internal;
+	size_t next_size = 0;
+
+	next_data += next_size;
+	next_size = internal_length * 4 * sizeof(bintree_region_node_t) / total_size;
+	region_nodes_base = new_sparse_collection_region_node (next_data, next_size);
+
+	next_data += next_size;
+	next_size = internal_length * sizeof(bintree_length_node_t) / total_size;
+	length_nodes_base = new_sparse_collection_length_node (next_data, next_size);
+
+	next_data += next_size;
+	next_size = internal_length * 4 * sizeof(bintree_p_node_t) / total_size;
+	p_nodes_base = new_sparse_collection_p_node (next_data, next_size);
 
 	kthread_unlock_task ();
-
 }
 
 bool freemem_add_region (freemem_region_t region) {
