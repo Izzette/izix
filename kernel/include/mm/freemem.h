@@ -29,10 +29,9 @@ void freemem_init (void *, size_t);
 
 bool freemem_add_region (freemem_region_t);
 bool freemem_remove_region (freemem_region_t);
-
 // The absolute value of offset must be less than alignment.
-// Will return zeroed if a suggestion cannot be found.
-freemem_region_t freemem_suggest (size_t, size_t, int);
+// Will return zeroed if a region cannot be found.
+freemem_region_t freemem_alloc (size_t, size_t, int);
 
 #endif
 

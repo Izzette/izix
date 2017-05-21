@@ -268,6 +268,70 @@ static void freemem_defrag (freemem_region_t region) {
 	}
 }
 
+static freemem_region_t freemem_suggest (
+		size_t length,
+		size_t alignment,
+		int offset
+) {
+	bintree_p_t
+		p_length_tree_base,
+		*p_length_tree = &p_length_tree_base;
+	bintree_length_node_t *length_entry;
+	bintree_p_node_t *p_entry;
+	bintree_length_iterator_t
+		length_iterator_base,
+		*length_iterator = &length_iterator_base;
+	bintree_p_iterator_t
+		p_iterator_base,
+		*p_iterator = &p_iterator_base;
+
+	length_entry = length_tree->search (length_tree, length);
+	if (!length_entry)
+		return new_freemem_region (NULL, 0);
+
+	length_iterator_base = new_bintree_length_iterator (length_entry);
+
+	if (length > length_entry->orderby) {
+		length_entry = length_iterator->next (length_iterator);
+		if (!length_entry)
+			return new_freemem_region (NULL, 0);
+	}
+
+	do {
+		size_t align_inc;
+
+		p_length_tree_base = new_bintree_p_from_fields (length_entry->data);
+		p_iterator_base = p_length_tree->new_iterator (p_length_tree);
+
+		p_entry = p_iterator->cur (p_iterator);
+		while (p_entry) {
+			if ((size_t)p_entry->orderby % alignment)
+				align_inc = alignment - (size_t)p_entry->orderby % alignment;
+			else
+				align_inc = 0;
+
+			if (0 <= offset) {
+				align_inc += offset;
+			} else {
+				if ((size_t)(-1 * offset) > align_inc)
+					align_inc += alignment;
+				align_inc -= -1 * offset;
+			}
+
+			if (length + align_inc <= length_entry->orderby)
+				return new_freemem_region (
+					(void *)p_entry->orderby + align_inc,
+					length);
+
+			p_entry = p_iterator->next (p_iterator);
+		}
+
+		length_entry = length_iterator->next (length_iterator);
+	} while (length_entry);
+
+	return new_freemem_region (NULL, 0);
+}
+
 static bool freemem_add_region_internal (freemem_region_t region) {
 	freemem_insert (region);
 	freemem_defrag (region);
@@ -341,69 +405,22 @@ static bool freemem_remove_region_internal (freemem_region_t region) {
 	return true;
 }
 
-static freemem_region_t freemem_suggest_internal (
+static freemem_region_t freemem_alloc_internal (
 		size_t length,
 		size_t alignment,
 		int offset
 ) {
-	bintree_p_t
-		p_length_tree_base,
-		*p_length_tree = &p_length_tree_base;
-	bintree_length_node_t *length_entry;
-	bintree_p_node_t *p_entry;
-	bintree_length_iterator_t
-		length_iterator_base,
-		*length_iterator = &length_iterator_base;
-	bintree_p_iterator_t
-		p_iterator_base,
-		*p_iterator = &p_iterator_base;
+	const freemem_region_t suggestion = freemem_suggest (length, alignment, offset);
+	if (!suggestion.length)
+		return suggestion;
 
-	length_entry = length_tree->search (length_tree, length);
-	if (!length_entry)
+	const bool remove_success = freemem_remove_region_internal (suggestion);
+	if (!remove_success)
 		return new_freemem_region (NULL, 0);
 
-	length_iterator_base = new_bintree_length_iterator (length_entry);
-
-	if (length > length_entry->orderby) {
-		length_entry = length_iterator->next (length_iterator);
-		if (!length_entry)
-			return new_freemem_region (NULL, 0);
-	}
-
-	do {
-		size_t align_inc;
-
-		p_length_tree_base = new_bintree_p_from_fields (length_entry->data);
-		p_iterator_base = p_length_tree->new_iterator (p_length_tree);
-
-		p_entry = p_iterator->cur (p_iterator);
-		while (p_entry) {
-			if ((size_t)p_entry->orderby % alignment)
-				align_inc = alignment - (size_t)p_entry->orderby % alignment;
-			else
-				align_inc = 0;
-
-			if (0 <= offset) {
-				align_inc += offset;
-			} else {
-				if ((size_t)(-1 * offset) > align_inc)
-					align_inc += alignment;
-				align_inc -= -1 * offset;
-			}
-
-			if (length + align_inc <= length_entry->orderby)
-				return new_freemem_region (
-					(void *)p_entry->orderby + align_inc,
-					length);
-
-			p_entry = p_iterator->next (p_iterator);
-		}
-
-		length_entry = length_iterator->next (length_iterator);
-	} while (length_entry);
-
-	return new_freemem_region (NULL, 0);
+	return suggestion;
 }
+
 
 void freemem_init (void *internal, size_t internal_length) {
 	kthread_lock_task ();
@@ -454,10 +471,10 @@ bool freemem_remove_region (freemem_region_t region) {
 	return ret;
 }
 
-freemem_region_t freemem_suggest (size_t length, size_t alignment, int offset) {
+freemem_region_t freemem_alloc (size_t length, size_t alignment, int offset) {
 	kthread_lock_task ();
 
-	const freemem_region_t ret = freemem_suggest_internal (length, alignment, offset);
+	const freemem_region_t ret = freemem_alloc_internal (length, alignment, offset);
 
 	kthread_unlock_task ();
 

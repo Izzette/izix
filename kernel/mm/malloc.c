@@ -46,21 +46,16 @@ void *malloc (size_t size) {
 	size_t internal_size = malloc_get_internal_size (size);
 
 	// Avoid fragmentation and add room for size_t
-	freemem_region_t suggestion = freemem_suggest (internal_size, MALLOC_ALIGNMENT, 0);
+	freemem_region_t region = freemem_alloc (internal_size, MALLOC_ALIGNMENT, 0);
 
-	if (!suggestion.length)
+	if (!region.length)
 		return NULL;  // ENOMEM
 
-	bool remove_success = freemem_remove_region (suggestion);
-
-	if (!remove_success)
-		return NULL; // Out of internal freemem entries.
-
-	void *internal_ptr = suggestion.p;
+	void *internal_ptr = region.p;
 
 	void *ptr = malloc_get_shared_ptr (internal_ptr);
 
-	malloc_set_allocated_size (internal_ptr, suggestion.length);
+	malloc_set_allocated_size (internal_ptr, region.length);
 
 	return ptr;
 }

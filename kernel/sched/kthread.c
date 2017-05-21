@@ -100,15 +100,9 @@ static volatile kthread_lock_t *kthread_get_running_lock () {
 }
 
 static freemem_region_t kthread_stack_alloc () {
-	freemem_region_t stack_region = freemem_suggest (KTHREAD_STACK_SIZE, PAGE_SIZE, 0);
-	if (!stack_region.length)
-		return new_freemem_region (NULL, 0);
-
-	const bool remove_success = freemem_remove_region (stack_region);
-	if (!remove_success) {
-		kputs (
-			"sched/kthread: Failed to trivially remove "
-			"freemem-suggested stack region!\n");
+	freemem_region_t stack_region = freemem_alloc (KTHREAD_STACK_SIZE, PAGE_SIZE, 0);
+	if (!stack_region.length) {
+		kputs ("sched/kthread: Failed to allocate new kthread stack!\n");
 		kpanic ();
 	}
 
@@ -160,13 +154,7 @@ static linked_list_kthread_node_t *kthread_create_thread (
 		void (*entry) ()
 ) {
 	freemem_region_t stack_region = kthread_stack_alloc ();
-	if (!stack_region.length) {
-		kputs ("sched/kthread: Failed to allocate new kthread stack!\n");
-		kpanic ();
-	}
-
 	kthread_task_t task = new_kthread_task (entry, freemem_region_end (stack_region));
-
 	kthread_t kthread = new_kthread (kpid, parent, stack_region, task);
 
 	linked_list_kthread_node_t *kthread_node =
