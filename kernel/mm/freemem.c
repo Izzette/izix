@@ -8,6 +8,7 @@
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <mm/freemem.h>
+#include <sched/spinlock.h>
 #include <sched/kthread.h>
 
 // TODO: By limitation of size_t and the choice to use the exclusive maximum of regions
@@ -44,6 +45,10 @@ static sparse_collection_p_node_t
 static sparse_collection_length_node_t
 	length_nodes_base,
 	*length_nodes = &length_nodes_base;
+
+static spinlock_t
+	freemem_lock_base,
+	*freemem_lock = &freemem_lock_base;
 
 // Panics if perfect matches cannot be found.
 static bintree_region_node_t *freemem_get_nodes (
@@ -421,9 +426,9 @@ static freemem_region_t freemem_alloc_internal (
 	return suggestion;
 }
 
-
+// Must be called before initializing kthreads
 void freemem_init (void *internal, size_t internal_length) {
-	kthread_lock_task ();
+	freemem_lock_base = new_spinlock ();
 
 	region_tree_base = new_bintree_region ();
 	length_tree_base = new_bintree_length ();
@@ -447,36 +452,44 @@ void freemem_init (void *internal, size_t internal_length) {
 	next_data += next_size;
 	next_size = internal_length * 4 * sizeof(bintree_p_node_t) / total_size;
 	p_nodes_base = new_sparse_collection_p_node (next_data, next_size);
+}
 
-	kthread_unlock_task ();
+// We can't use an ordinary mutex here, because it requires memory allocation.
+static void freemem_obtain_lock () {
+	while (!spinlock_try_lock (freemem_lock))
+		kthread_yield ();
+}
+
+static void freemem_release_lock () {
+	spinlock_release (freemem_lock);
 }
 
 bool freemem_add_region (freemem_region_t region) {
-	kthread_lock_task ();
+	freemem_obtain_lock ();
 
 	const bool ret = freemem_add_region_internal (region);
 
-	kthread_unlock_task ();
+	freemem_release_lock ();
 
 	return ret;
 }
 
 bool freemem_remove_region (freemem_region_t region) {
-	kthread_lock_task ();
+	freemem_obtain_lock ();
 
 	const bool ret = freemem_remove_region_internal (region);
 
-	kthread_unlock_task ();
+	freemem_release_lock ();
 
 	return ret;
 }
 
 freemem_region_t freemem_alloc (size_t length, size_t alignment, int offset) {
-	kthread_lock_task ();
+	freemem_obtain_lock ();
 
 	const freemem_region_t ret = freemem_alloc_internal (length, alignment, offset);
 
-	kthread_unlock_task ();
+	freemem_release_lock ();
 
 	return ret;
 }

@@ -146,16 +146,16 @@ static linked_list_kthread_node_t *kthread_node_alloc (kthread_t kthread) {
 static kpid_t kthread_pop_free_kpid () {
 	static volatile kpid_t last_kpid = 1;
 
-	kthread_lock_task ();
-	bintree_kpid_node_t *kpid_parent_node = kpids_free->search (
-		(bintree_kpid_t *)kpids_free, last_kpid);
-	kthread_unlock_task ();
-
-	if (!kpid_parent_node)
-		return -1;
-
 	// Lock task until kpid_node is removed and last_kpid incremented.
 	kthread_lock_task ();
+
+	bintree_kpid_node_t *kpid_parent_node = kpids_free->search (
+		(bintree_kpid_t *)kpids_free, last_kpid);
+
+	if (!kpid_parent_node) {
+		kthread_unlock_task ();
+		return -1;
+	}
 
 	if (last_kpid > (kpid_t)kpid_parent_node->orderby) {
 		bintree_kpid_iterator_t iterator_base, *iterator = &iterator_base;
@@ -459,8 +459,10 @@ bool kthread_wake (kpid_t kpid) {
 	}
 
 	linked_list_kthread_node_t *kthread_node = kthread_blocking_node->data;
-	if (kpid != kthread_node->data.kpid)
+	if (kpid != kthread_node->data.kpid) {
+		kthread_unlock_task ();
 		return false;
+	}
 
 	kthreads_blocking->remove (
 		(bintree_kthread_t *)kthreads_blocking,
