@@ -117,10 +117,14 @@ static linked_list_node_t *linked_list_get_from (linked_list_node_t *start, size
 	return start;
 }
 
+// The iterator functions are so simple, it's important that they are fast.
+__attribute__((optimize("O3")))
 linked_list_node_t *linked_list_iterator_cur (linked_list_iterator_t *this) {
 	return this->node;
 }
 
+
+__attribute__((optimize("O3")))
 linked_list_node_t *linked_list_iterator_next (linked_list_iterator_t *this) {
 	if (!this->node)
 		return NULL;
@@ -133,6 +137,7 @@ linked_list_node_t *linked_list_iterator_next (linked_list_iterator_t *this) {
 	return this->node;
 }
 
+__attribute__((optimize("O3")))
 linked_list_node_t *linked_list_iterator_prev (linked_list_iterator_t *this) {
 	if (!this->node)
 		return NULL;
@@ -145,6 +150,7 @@ linked_list_node_t *linked_list_iterator_prev (linked_list_iterator_t *this) {
 	return this->node;
 }
 
+__attribute__((optimize("O3")))
 void linked_list_iterator_reset (linked_list_iterator_t *this) {
 	while (linked_list_iterator_prev (this));
 }
@@ -238,6 +244,7 @@ void linked_list_removeNode (linked_list_t *this, linked_list_node_t *node) {
 	linked_list_remove_node (node);
 }
 
+__attribute__((optimize("O3")))
 linked_list_iterator_t new_linked_list_iterator_from_list (linked_list_t *this) {
 	return new_linked_list_iterator (this->start);
 }

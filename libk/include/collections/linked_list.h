@@ -39,6 +39,8 @@ linked_list_node_t *linked_list_iterator_next (linked_list_iterator_t *);
 linked_list_node_t *linked_list_iterator_prev (linked_list_iterator_t *);
 void linked_list_iterator_reset (linked_list_iterator_t *);
 
+// The iterator functions are so simple, it's important that they are fast.
+__attribute__((optimize("O3")))
 static inline linked_list_iterator_t new_linked_list_iterator (
 		linked_list_node_t *node
 ) {

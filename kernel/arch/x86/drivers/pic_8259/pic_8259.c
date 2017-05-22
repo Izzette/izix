@@ -5,6 +5,8 @@
 #include <irq/irq.h>
 #include <irq/irq_vectors.h>
 
+// Some of these functions are used by IRQ handlers, which must be very fast.
+
 #define PIC_MASTER_CMD  0x0020
 #define PIC_MASTER_DATA 0x0021
 #define PIC_SLAVE_CMD   0x00a0
@@ -28,40 +30,39 @@
 #define ICW4_BUF_MASTER 0x0C // Buffered mode/master
 #define ICW4_SFNM       0x10 // Special fully nested (not)
 
-static inline bool pic_8259_is_master_irq (irq_t irq) {
+static bool pic_8259_is_master_irq (irq_t irq) {
 	return 8 > irq;
 }
 
-static inline bool pic_8259_is_slave_irq (irq_t irq) {
+static bool pic_8259_is_slave_irq (irq_t irq) {
 	return !pic_8259_is_master_irq (irq);
 }
 
-static inline irq_t pic_8259_get_relative_irq (irq_t irq) {
+static irq_t pic_8259_get_relative_irq (irq_t irq) {
 	if (pic_8259_is_slave_irq (irq))
 		return irq - 8;
 
 	return irq;
 }
 
-static inline uint16_t pic_8259_get_pic_cmd_port (irq_t irq) {
+__attribute__((optimize("O3")))
+static uint16_t pic_8259_get_pic_cmd_port (irq_t irq) {
 	if (pic_8259_is_master_irq (irq))
 		return PIC_MASTER_CMD;
 
 	return PIC_SLAVE_CMD;
 }
 
-static inline uint16_t pic_8259_get_pic_data_port (irq_t irq) {
+static uint16_t pic_8259_get_pic_data_port (irq_t irq) {
 	if (pic_8259_is_master_irq (irq))
 		return PIC_MASTER_DATA;
 
 	return PIC_SLAVE_DATA;
 }
 
+__attribute__((optimize("O3")))
 void pic_8259_send_eoi (irq_t irq) {
-	if(irq >= 8)
-		outb (PIC_EOI, PIC_SLAVE_CMD);
-
-	outb (PIC_EOI, PIC_MASTER_CMD);
+	outb (PIC_EOI, pic_8259_get_pic_cmd_port (irq));
 }
 
 void pic_8259_reinit () {

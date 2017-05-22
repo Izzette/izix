@@ -13,11 +13,14 @@
 #include <mm/gdt.h>
 #include <sched/tss.h>
 
+// Some of these functions account for a very large quantity of code in this kernel.
+
 #define GDT_TSS_ACCESS_BYTE 0x89
 #define GDT_TSS_FLAGS       0x4
 
 static gdt_register_t *gdtr;
 
+__attribute__((optimize("Os")))
 static gdt32_logical_register_t get_logical_gdtr (gdt_register_t registry) {
 	gdt32_logical_register_t logical_registry;
 
@@ -26,6 +29,7 @@ static gdt32_logical_register_t get_logical_gdtr (gdt_register_t registry) {
 	return logical_registry;
 }
 
+__attribute__((optimize("Os")))
 static gdt32_logical_entry_t get_logical_entry (gdt32_entry_t entry)  {
 	gdt32_logical_entry_t logical_entry;
 
@@ -34,12 +38,14 @@ static gdt32_logical_entry_t get_logical_entry (gdt32_entry_t entry)  {
 	return logical_entry;
 }
 
+__attribute__((optimize("Os")))
 static void print_logical_gdtr (gdt32_logical_register_t logical_registry) {
 	kprintf ("mm/gdt: size=%u offset=%p\n",
 		logical_registry.size,
 		logical_registry.offset);
 }
 
+__attribute__((optimize("Os")))
 static void print_logical_entry (gdt32_logical_entry_t logical_entry) {
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	kprintf ("mm/gdt: limit=0x%05x base=%p\n",
@@ -58,20 +64,24 @@ static void print_logical_entry (gdt32_logical_entry_t logical_entry) {
 		logical_entry.flags.granularity ? "GR" : "--");
 }
 
+__attribute__((optimize("Os")))
 static void print_logical_tss (gdt32_logical_entry_t logical_entry) {
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	kprintf ("mm/gdt: TSS=%p\n", (void *)logical_entry.base);
 #pragma GCC diagnostic pop
 }
 
+__attribute__((optimize("Os")))
 static gdt_access_t gdt_get_access_byte (gdt32_entry_t entry) {
 	return (entry & GDT_ACCESS_DEMASK) >> GDT_ACCESS_OFFSET;
 }
 
+__attribute__((optimize("Os")))
 static gdt32_flags_t gdt_get_flags (gdt32_entry_t entry) {
 	return (entry & GDT_FLAGS_DEMASK) >> GDT_FLAGS_OFFSET;
 }
 
+__attribute__((optimize("Os")))
 static bool gdt_is_null (gdt32_entry_t entry) {
 	return 0 == entry;
 }
@@ -79,6 +89,7 @@ static bool gdt_is_null (gdt32_entry_t entry) {
 static bool gdt_is_tss (gdt32_entry_t);
 
 #define MKGDT_IS_EXEC(name, oper) \
+__attribute__((optimize("Os"))) \
 static bool gdt_is_##name (gdt32_entry_t entry) { \
 	if (gdt_is_null (entry) || gdt_is_tss (entry)) \
 		return false; \
@@ -95,15 +106,18 @@ static bool gdt_is_##name (gdt32_entry_t entry) { \
 MKGDT_IS_EXEC(code, )
 MKGDT_IS_EXEC(data, !)
 
+__attribute__((optimize("Os")))
 static bool gdt_is_tss (gdt32_entry_t entry) {
 	return (GDT_TSS_ACCESS_BYTE == gdt_get_access_byte (entry) &&
 			GDT_TSS_FLAGS       == gdt_get_flags       (entry));
 }
 
+__attribute__((optimize("Os")))
 static segment_selector_t gdt_get_segment_selector (size_t i) {
 	return GDT_SELECTOR_INC * i;
 }
 
+__attribute__((optimize("Os")))
 static void __attribute__((noinline)) gdt_reload () {
 	// TODO: allow code segement selectors other than 0x08.
 	asm volatile (
@@ -115,6 +129,7 @@ static void __attribute__((noinline)) gdt_reload () {
 		:"r"(gdtr));
 }
 
+__attribute__((optimize("Os")))
 void gdt_register (gdt_register_t *registry) {
 	gdt32_logical_register_t logical_registry = get_logical_gdtr (*registry);
 
@@ -133,6 +148,7 @@ void gdt_register (gdt_register_t *registry) {
 	gdt_reload ();
 }
 
+__attribute__((optimize("Os")))
 void gdt_dump_entries () {
 	size_t i;
 
@@ -166,6 +182,7 @@ void gdt_dump_entries () {
 }
 
 #define MKGDT_GET_SELECTOR(type) \
+__attribute__((optimize("Os"))) \
 segment_selector_t gdt_get_nth_##type##_selector (size_t n) { \
 	const gdt32_logical_register_t logical_registry = get_logical_gdtr (*gdtr); \
 \
@@ -188,6 +205,7 @@ MKGDT_GET_SELECTOR(code)
 MKGDT_GET_SELECTOR(data)
 MKGDT_GET_SELECTOR(tss)
 
+__attribute__((optimize("Os")))
 segment_selector_t gdt_add_tss (tss_t *tss_ptr) {
 	gdt32_logical_register_t logical_registry = get_logical_gdtr (*gdtr);
 

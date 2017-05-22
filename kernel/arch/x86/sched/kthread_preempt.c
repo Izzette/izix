@@ -13,6 +13,7 @@ static spinlock_t
 	*kthread_preempt_lock = &kthread_preempt_lock_base;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+__attribute__((optimize("O3"))) // Interupt handlers must be very fast!
 static void kthread_pit_825x_irq0_hook (irq_t irq) {
 	if (spinlock_is_locked (kthread_preempt_lock))
 		return;

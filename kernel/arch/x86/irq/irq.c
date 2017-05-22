@@ -9,20 +9,25 @@
 #include <irq/irq.h>
 #include <pic_8259/pic_8259.h>
 
+// Interupt handlers must be very fast, so we've cut out all the stops and optimized the
+// important functions.
+
 TPL_LINKED_LIST(irq_hook, irq_hook_t)
 
 static volatile linked_list_irq_hook_t *irq_pre_hooks;
 static volatile linked_list_irq_hook_t *irq_post_hooks;
 
-static inline volatile linked_list_irq_hook_t *irq_get_pre_hook_list (irq_t irq) {
+__attribute__((optimize("O3")))
+static volatile linked_list_irq_hook_t *irq_get_pre_hook_list (irq_t irq) {
 	return &irq_pre_hooks[irq];
 }
 
-static inline volatile linked_list_irq_hook_t *irq_get_post_hook_list (irq_t irq) {
+__attribute__((optimize("O3")))
+static volatile linked_list_irq_hook_t *irq_get_post_hook_list (irq_t irq) {
 	return &irq_post_hooks[irq];
 }
 
-static inline void irq_add_hook (
+static void irq_add_hook (
 		volatile linked_list_irq_hook_t *hook_list,
 		irq_hook_t hook
 ) {
@@ -40,7 +45,8 @@ static inline void irq_add_hook (
 		hook_node);
 }
 
-static inline void irq_run_hooks (
+__attribute__((optimize("O3")))
+static void irq_run_hooks (
 		irq_t irq,
 		volatile linked_list_irq_hook_t *hook_list
 ) {
@@ -91,6 +97,7 @@ void irq_add_post_hook (irq_t irq, irq_hook_t hook) {
 	pic_8259_unmask (irq);
 }
 
+__attribute__((optimize("O3")))
 void irq_handler (irq_t irq) {
 	volatile linked_list_irq_hook_t *pre_hook_list = irq_get_pre_hook_list (irq);
 	volatile linked_list_irq_hook_t *post_hook_list = irq_get_post_hook_list (irq);

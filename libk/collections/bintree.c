@@ -4,6 +4,10 @@
 
 #include <collections/bintree.h>
 
+// These routines account for a very large quantity of code in this kernel, thus we've
+// added __attribute__((optimize("Os")))
+
+__attribute__((optimize("Os")))
 static bintree_node_t *bintree_node_next (bintree_node_t *node) {
 	bintree_sub_t
 		subtree_base,
@@ -24,6 +28,7 @@ static bintree_node_t *bintree_node_next (bintree_node_t *node) {
 	return NULL;
 }
 
+__attribute__((optimize("Os")))
 static bintree_node_t *bintree_node_prev (bintree_node_t *node) {
 	bintree_sub_t
 		subtree_base,
@@ -44,6 +49,7 @@ static bintree_node_t *bintree_node_prev (bintree_node_t *node) {
 	return NULL;
 }
 
+__attribute__((optimize("Os")))
 static void bintree_remove_node_zero (bintree_t *tree, bintree_node_t *node) {
 	if (node == tree->root)
 		tree->root = NULL;
@@ -55,6 +61,7 @@ static void bintree_remove_node_zero (bintree_t *tree, bintree_node_t *node) {
 	node->parent = NULL;
 }
 
+__attribute__((optimize("Os")))
 static void bintree_remove_node_one (bintree_t *tree, bintree_node_t *node) {
 	bintree_node_t *replacement;
 
@@ -78,6 +85,7 @@ static void bintree_remove_node_one (bintree_t *tree, bintree_node_t *node) {
 	node->parent = NULL;
 }
 
+__attribute__((optimize("Os")))
 static void bintree_remove_node_two (bintree_t *this, bintree_node_t *node) {
 	bintree_iterator_t
 		iterator_base,
@@ -119,12 +127,15 @@ static void bintree_remove_node_two (bintree_t *this, bintree_node_t *node) {
 	node->parent = NULL;
 }
 
+// The iterator functions are so simple, it's important that they are fast.
+__attribute__((optimize("O3")))
 static bintree_node_t *bintree_iterator_cur (
 		bintree_iterator_t *this
 ) {
 	return this->node;
 }
 
+__attribute__((optimize("O3")))
 static bintree_node_t *bintree_iterator_next (
 		bintree_iterator_t *this
 ) {
@@ -139,6 +150,7 @@ static bintree_node_t *bintree_iterator_next (
 	return this->cur (this);
 }
 
+__attribute__((optimize("O3")))
 static bintree_node_t *bintree_iterator_prev (
 		bintree_iterator_t *this
 ) {
@@ -156,12 +168,14 @@ static bintree_node_t *bintree_iterator_prev (
 	return this->cur (this);
 }
 
+__attribute__((optimize("O3")))
 static void bintree_iterator_reset (
 		bintree_iterator_t *this
 ) {
 	while (this->prev (this));
 }
 
+__attribute__((optimize("O3")))
 bintree_iterator_t new_bintree_iterator (
 		bintree_node_t *node
 ) {

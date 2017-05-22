@@ -10,6 +10,9 @@
 
 // Very minimal sprintf functions.
 
+// These routines account for a very large quantity of code in this kernel, thus we've
+// added __attribute__((optimize("Os")))
+
 typedef enum printf_type_enum {
 	PRINTF_TYPE_PERCENT,  // '%'
 	PRINTF_TYPE_D_SINT,   // 'i', 'd'
@@ -57,6 +60,7 @@ static printf_placeholder_t printf_placeholder_prototype = {
 };
 
 // Return number of characters in number until invalid character.
+__attribute__((optimize("Os")))
 static inline size_t printf_get_num (const char *str, unsigned int *num_ptr) {
 	const char *cur = str;
 
@@ -138,6 +142,7 @@ static inline size_t maybe_sign (
 
 // Returns length of placeholder, including the first '%'.
 // Returns zero if placeholder is invalid.
+__attribute__((optimize("Os")))
 static inline size_t parse_placeholder (
 		const char *format,  // Points to first '%' character.
 		printf_placeholder_t *placeholder_ptr
@@ -244,6 +249,7 @@ PARSE_PLACEHOLDER_WIDTH:
 	return cur - format;
 }
 
+__attribute__((optimize("Os")))
 int vsprintf (char *str, const char *format, va_list ap) {
 	char *cur = str;
 
