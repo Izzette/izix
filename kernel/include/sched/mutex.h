@@ -18,11 +18,12 @@ typedef linked_list_mutex_kpid_iterator_t mutex_kpid_list_iterator_t;
 #define new_mutex_kpid_list new_linked_list_mutex_kpid
 #define new_mutex_kpid_list_node new_linked_list_mutex_kpid_node
 
-typedef struct mutex_struct {
+typedef volatile struct mutex_struct {
 	native_lock_t native_lock_base;
-	volatile linked_list_mutex_kpid_t waiting_kpids_base;
+	linked_list_mutex_kpid_t waiting_kpids_base;
 } mutex_t;
 
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
 static inline mutex_t new_mutex () {
 	mutex_t mutex = {
 		.native_lock_base = new_native_lock (),
@@ -31,6 +32,7 @@ static inline mutex_t new_mutex () {
 
 	return mutex;
 }
+#pragma GCC diagnostic pop
 
 static inline native_lock_t *mutex_get_native_lock (mutex_t *mutex) {
 	return &mutex->native_lock_base;

@@ -5,8 +5,9 @@
 
 #include <tty/tty_driver.h>
 
-void set_kprint_tty_driver (tty_driver_t);
-tty_driver_t get_kprint_tty_driver ();
+void kprint_init ();
+void set_kprint_tty_driver (volatile tty_driver_t *);
+volatile tty_driver_t *get_kprint_tty_driver ();
 
 void kputs (const char *);
 int kprintf (const char *, ...)

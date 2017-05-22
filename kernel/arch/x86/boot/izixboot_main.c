@@ -64,33 +64,10 @@ void kernel_main (
 	gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
 #pragma GCC diagnostic pop
 
-	tty_driver_t tty_driver_vga_text = get_tty_vga ();
-
-	tty_driver_vga_text.init (&tty_driver_vga_text);
-
-	set_kprint_tty_driver (tty_driver_vga_text);
-
-	kprintf (
-		"boot/izixboot_main: Provided command line:\n"
-			"\tstack_start=%p\n"
-			"\tstack_length=0x%zx\n"
-			"\tbss_end=%p\n"
-			"\te820_entry_count=%zd\n"
-			"\te820_entries=%p\n"
-			"\tgdtr=%p\n",
-		stack_start,
-		stack_length,
-		bss_end,
-		e820_entry_count,
-		e820_entries,
-		gdtr);
-
-	e820_register (e820_entry_count, e820_entries);
-	e820_dump_entries ();
-
 	freemem_region_t
 		kernel_region, null_region, stack_region,
-		int_stack_region, freemem_internal_region;
+		int_stack_region, freemem_internal_region,
+		tty_driver_region;
 
 	const size_t kernel_and_bss_length =
 		((bss_end > KERNEL_MAX_END) ?
@@ -114,11 +91,46 @@ void kernel_main (
 	freemem_internal_region = new_freemem_region (
 		freemem_region_end (int_stack_region), // Exclusive max.
 		9 * PAGE_SIZE);
+	tty_driver_region = new_freemem_region (
+		freemem_region_end (freemem_internal_region), // Exclusive max.
+		sizeof(tty_driver_t));
+
+	if (tty_driver_region.length % MALLOC_ALIGNMENT)
+		tty_driver_region.length +=
+			MALLOC_ALIGNMENT - sizeof(tty_driver_t) % MALLOC_ALIGNMENT;
+
+	volatile tty_driver_t *tty_driver_vga_text = tty_driver_region.p;
+
+	*tty_driver_vga_text = new_tty_vga_driver ();
+
+	tty_driver_vga_text->init ((tty_driver_t *)tty_driver_vga_text);
+
+	kprint_init ();
+	set_kprint_tty_driver (tty_driver_vga_text);
+
+	kprintf (
+		"boot/izixboot_main: Provided command line:\n"
+			"\tstack_start=%p\n"
+			"\tstack_length=0x%zx\n"
+			"\tbss_end=%p\n"
+			"\te820_entry_count=%zd\n"
+			"\te820_entries=%p\n"
+			"\tgdtr=%p\n",
+		stack_start,
+		stack_length,
+		bss_end,
+		e820_entry_count,
+		e820_entries,
+		gdtr);
+
+	e820_register (e820_entry_count, e820_entries);
+	e820_dump_entries ();
 
 	freemem_init (freemem_internal_region.p, freemem_internal_region.length);
 
 	e820_add_freemem ();
 
+	freemem_remove_region (tty_driver_region);
 	freemem_remove_region (freemem_internal_region);
 	freemem_remove_region (int_stack_region);
 	freemem_remove_region (kernel_region);

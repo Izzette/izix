@@ -52,6 +52,9 @@ static tty_driver_t tty_vga_prototype = {
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
 static bool tty_vga_init (tty_driver_t *this) {
+	this->pimpl = &tty_vga_privdata;
+	this->mutex_base = new_mutex ();
+
 	vga_text_init ();
 
 	return true;
@@ -142,11 +145,8 @@ static void tty_vga_color_updates (tty_driver_t *this) {
 	privdata_ptr->vga_color.bg = this->bg_color;
 }
 
-tty_driver_t get_tty_vga () {
-	tty_driver_t tty_vga = tty_vga_prototype;
-	tty_vga.pimpl = &tty_vga_privdata;
-
-	return tty_vga;
+tty_driver_t new_tty_vga_driver () {
+	return tty_vga_prototype;
 }
 
 #pragma GCC diagnostic pop
