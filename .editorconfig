@@ -1,0 +1,52 @@
+# .editorconfig
+
+root = true
+
+# Modern *nix styleing for everything
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[.editorconfig]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+
+# C styling
+[*.{c,h}]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+
+# Assembly styling
+[*.{s,S}]
+indent_style = tab
+indent_size = 8
+trim_trailing_whitespace = true
+
+# Makefile styling
+[{Makefile,*.d}]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+
+# Markdown styling
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# LICENSE styling
+[LICENSE]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Git styling
+[{.gitignore,.gitmodules}]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# vim: set ts=2 sw=2 et syn=dosini:
