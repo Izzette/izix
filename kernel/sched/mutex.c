@@ -5,7 +5,7 @@
 #include <mm/malloc.h>
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
-#include <sched/spinlock.h>
+#include <sched/native_lock.h>
 #include <sched/mutex.h>
 #include <sched/kthread.h>
 
@@ -13,7 +13,7 @@ void mutex_lock (mutex_t *mutex) {
 	if (!kthread_is_init ())
 		return;
 
-	while (!spinlock_try_lock (mutex_get_spinlock (mutex))) {
+	while (!native_lock_try_lock (mutex_get_native_lock (mutex))) {
 		volatile mutex_kpid_list_t *waiting_kpids;
 		mutex_kpid_list_node_t *kpid_node;
 
@@ -35,7 +35,7 @@ void mutex_lock (mutex_t *mutex) {
 
 		// In case the lock has been released since our last attempt, we don't want
 		// to be waiting around for a lock that's already been released.
-		if (spinlock_try_lock (mutex_get_spinlock (mutex))) {
+		if (native_lock_try_lock (mutex_get_native_lock (mutex))) {
 			free (kpid_node);
 
 			break;
@@ -70,7 +70,7 @@ void mutex_release (mutex_t *mutex) {
 		free (kpid_node);
 	}
 
-	spinlock_release (mutex_get_spinlock (mutex));
+	native_lock_release (mutex_get_native_lock (mutex));
 
 	kthread_unlock_task ();
 }

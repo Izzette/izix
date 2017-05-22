@@ -464,42 +464,32 @@ void freemem_init (void *internal, size_t internal_length) {
 	p_nodes_base = new_sparse_collection_p_node (next_data, next_size);
 }
 
-// We can't use an ordinary mutex here, because it requires memory allocation.
-static void freemem_obtain_lock () {
-	while (!spinlock_try_lock (freemem_lock))
-		kthread_yield ();
-}
-
-static void freemem_release_lock () {
-	spinlock_release (freemem_lock);
-}
-
 bool freemem_add_region (freemem_region_t region) {
-	freemem_obtain_lock ();
+	spinlock_lock (freemem_lock);
 
 	const bool ret = freemem_add_region_internal (region);
 
-	freemem_release_lock ();
+	spinlock_release (freemem_lock);
 
 	return ret;
 }
 
 bool freemem_remove_region (freemem_region_t region) {
-	freemem_obtain_lock ();
+	spinlock_lock (freemem_lock);
 
 	const bool ret = freemem_remove_region_internal (region);
 
-	freemem_release_lock ();
+	spinlock_release (freemem_lock);
 
 	return ret;
 }
 
 freemem_region_t freemem_alloc (size_t length, size_t alignment, int offset) {
-	freemem_obtain_lock ();
+	spinlock_lock (freemem_lock);
 
 	const freemem_region_t ret = freemem_alloc_internal (length, alignment, offset);
 
-	freemem_release_lock ();
+	spinlock_release (freemem_lock);
 
 	return ret;
 }

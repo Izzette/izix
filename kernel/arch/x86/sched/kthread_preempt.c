@@ -5,17 +5,17 @@
 #include <kprint/kprint.h>
 #include <irq/irq.h>
 #include <sched/kthread.h>
-#include <sched/spinlock.h>
+#include <sched/native_lock.h>
 
 static volatile bool kthread_preempt_init = false;
-static spinlock_t
+static native_lock_t
 	kthread_preempt_lock_base,
 	*kthread_preempt_lock = &kthread_preempt_lock_base;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 __attribute__((optimize("O3"))) // Interupt handlers must be very fast!
 static void kthread_pit_825x_irq0_hook (irq_t irq) {
-	if (spinlock_is_locked (kthread_preempt_lock))
+	if (native_lock_is_locked (kthread_preempt_lock))
 		return;
 
 	// If we can't obtain the exclusive lock, we return to the task because switching
@@ -35,7 +35,7 @@ void kthread_preempt_enable () {
 	if (!kthread_preempt_init) {
 		kthread_preempt_init = true;
 
-		kthread_preempt_lock_base = new_spinlock ();
+		kthread_preempt_lock_base = new_native_lock ();
 
 		irq_add_post_hook (0, kthread_pit_825x_irq0_hook);
 
@@ -44,8 +44,8 @@ void kthread_preempt_enable () {
 		return;
 	}
 
-	if (spinlock_is_locked (kthread_preempt_lock))
-		spinlock_release (kthread_preempt_lock);
+	if (native_lock_is_locked (kthread_preempt_lock))
+		native_lock_release (kthread_preempt_lock);
 }
 
 void kthread_preempt_disable () {
@@ -53,7 +53,7 @@ void kthread_preempt_disable () {
 		return;
 
 	// Just make sure it's locked.
-	spinlock_try_lock (kthread_preempt_lock);
+	native_lock_try_lock (kthread_preempt_lock);
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

@@ -72,7 +72,7 @@ objects_x86_mm := $(addprefix kernel/arch/$(ARCH)/mm/,$(objects_x86_mm))
 objects_mm := $(objects_mm) $(objects_x86_mm)
 endif
 
-objects_sched := mutex.o kthread.o
+objects_sched := spinlock.o mutex.o kthread.o
 objects_sched := $(addprefix kernel/sched/,$(objects_sched))
 
 objects_sched_asm :=

@@ -7,7 +7,7 @@
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <asm/halt.h>
-#include <sched/spinlock.h>
+#include <sched/native_lock.h>
 #include <sched/kthread_kpid.h>
 #include <sched/kthread_task.h>
 #include <sched/kthread_preempt.h>
@@ -18,7 +18,7 @@
 #define KTHREAD_MAIN_KPID 2
 
 typedef struct kthread_lock_struct {
-	spinlock_t spinlock;
+	native_lock_t native_lock;
 	size_t depth;
 } kthread_lock_t;
 
@@ -34,7 +34,7 @@ typedef struct kthread_struct {
 
 static kthread_lock_t new_kthread_lock () {
 	kthread_lock_t lock = {
-		.spinlock = new_spinlock (),
+		.native_lock = new_native_lock (),
 		.depth = 0
 	};
 
@@ -258,7 +258,7 @@ static void kthread_next_task (volatile kthread_task_t *this_task) {
 
 		// Increment lock depth on next task before swapping with kthread_running_node.
 		volatile kthread_lock_t *next_kthread_lock = &next_kthread_node->data.lock;
-		spinlock_try_lock (&next_kthread_lock->spinlock);
+		native_lock_try_lock (&next_kthread_lock->native_lock);
 		next_kthread_lock->depth += 1;
 
 		kthread_running_node = next_kthread_node;
@@ -504,7 +504,7 @@ bool kthread_lock_task () {
 
 	volatile kthread_lock_t *running_lock = kthread_get_running_lock ();
 
-	const bool first_lock = spinlock_try_lock (&running_lock->spinlock);
+	const bool first_lock = native_lock_try_lock (&running_lock->native_lock);
 	running_lock->depth += 1;
 
 	return first_lock;
@@ -519,7 +519,7 @@ void kthread_unlock_task () {
 
 	if (1 >= running_lock->depth) {
 		running_lock->depth = 0;
-		spinlock_release (&running_lock->spinlock);
+		native_lock_release (&running_lock->native_lock);
 		return;
 	}
 

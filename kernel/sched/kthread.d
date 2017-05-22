@@ -6,6 +6,6 @@ kernel/sched/kthread.o: \
 		kernel/include/kpanic/kpanic.h \
 		kernel/include/sched/kthread_kpid.h \
 		kernel/arch/$(ARCH)/include/asm/halt.h \
-		kernel/arch/$(ARCH)/include/sched/spinlock.h \
+		kernel/arch/$(ARCH)/include/sched/native_lock.h \
 		kernel/arch/$(ARCH)/include/sched/kthread_task.h \
 		kernel/arch/$(ARCH)/include/sched/kthread_preempt.h
