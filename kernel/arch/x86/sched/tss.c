@@ -3,6 +3,7 @@
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <sched/tss.h>
+#include <mm/segment.h>
 #include <mm/gdt.h>
 #include <mm/malloc.h>
 
@@ -14,7 +15,7 @@ void tss_init (void *esp) {
 
 	tss_logical_t logical_tss = new_tss_logical ();
 
-	logical_tss.ss0  = gdt_get_first_data_selector ();
+	logical_tss.ss0  = GDT_SUPERVISOR_DATA_SELECTOR;
 	logical_tss.esp0 = esp;
 	logical_tss.iopb = sizeof(tss_t);
 	if (!logical_tss.ss0) {
@@ -41,7 +42,7 @@ void tss_load (segment_selector_t tss_selector) {
 		:
 		:"r"(tss_selector));
 
-	kprintf ("sched/tss: TSS selector 0x%04hx loaded.\n", tss_selector);
+	kprintf ("sched/tss: TSS selector 0x%04hx loaded successfuly.\n", tss_selector);
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

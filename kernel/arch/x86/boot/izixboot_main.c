@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #include <izixboot/memmap.h>
-#include <izixboot/gdt.h>
 
 #include <tty/tty_driver.h>
 #include <tty/tty_vga_text.h>
@@ -49,8 +48,7 @@ void kernel_main (
 		uint32_t stack_length_u32,
 		uint32_t bss_end_u32,
 		uint32_t e820_entry_count_u32,
-		uint32_t e820_entries_u32,
-		uint32_t gdtr_u32
+		uint32_t e820_entries_u32
 ) {
 	// Cause #DF on jump/call to NULL.
 	create_null_region ();
@@ -61,7 +59,6 @@ void kernel_main (
 	void *stack_start = (void *)stack_start_u32;
 	void *bss_end = (void *)bss_end_u32;
 	e820_3x_entry_t *e820_entries = (e820_3x_entry_t *)e820_entries_u32;
-	gdt_register_t *gdtr = (gdt_register_t *)gdtr_u32;
 #pragma GCC diagnostic pop
 
 	freemem_region_t
@@ -114,14 +111,12 @@ void kernel_main (
 			"\tstack_length=0x%zx\n"
 			"\tbss_end=%p\n"
 			"\te820_entry_count=%zd\n"
-			"\te820_entries=%p\n"
-			"\tgdtr=%p\n",
+			"\te820_entries=%p\n",
 		stack_start,
 		stack_length,
 		bss_end,
 		e820_entry_count,
-		e820_entries,
-		gdtr);
+		e820_entries);
 
 	e820_register (e820_entry_count, e820_entries);
 	e820_dump_entries ();
@@ -137,14 +132,11 @@ void kernel_main (
 	freemem_remove_region (stack_region);
 	freemem_remove_region (null_region);
 
-	gdt_register (gdtr);
-
 	tss_init (freemem_region_end (int_stack_region));
-	segment_selector_t tss_segment = gdt_add_tss (tss_get ());
 
-	gdt_dump_entries ();
+	gdt_init (tss_get ());
 
-	tss_load (tss_segment);
+	tss_load (GDT_SUPERVISOR_TSS_SELECTOR);
 
 	idt_init ();
 

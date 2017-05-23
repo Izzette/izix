@@ -6,11 +6,9 @@
 #include <stdint.h>
 
 #include <string.h>
+#include <mm/segment.h>
 
-// TODO: Fix cyclic dependencies.
 typedef struct tss_struct tss_t;
-
-#include <mm/gdt.h>
 
 typedef struct __attribute__((packed)) tss_struct {
 	volatile uint16_t link;

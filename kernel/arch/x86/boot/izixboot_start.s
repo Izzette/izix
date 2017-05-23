@@ -24,25 +24,21 @@ _start:
 // The int 15h eax=e820 memory map array.
 	mov	0x08(%esp),	%ecx
 	mov	0x0c(%esp),	%ebx
-	mov	0x10(%esp),	%edx
 
 // We don't need anything else on this stack every again, reinitialize it.
 	mov	$stack_length+stack_low, %esp
 
 	push	%ecx
-	push	%edx
 	call	_init
-	pop	%edx
 	pop	%ecx
 
-	push	%edx
 	push	%ecx
 	push	%ebx
 	pushl	$__gnu_bssend
 	pushl	$stack_length
 	pushl	$stack_low
 	call	kernel_main
-	add	$0x18,		%sp
+	add	$0x14,		%sp
 
 	call	_fini
 

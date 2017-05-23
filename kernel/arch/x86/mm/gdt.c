@@ -1,11 +1,7 @@
 // kernel/arch/x86/mm/gdt.c
 
-#include <stdbool.h>
-
-#include <izixboot/gdt.h>
-#include <izixboot/gdt32.h>
-
-#include <string.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
@@ -13,229 +9,241 @@
 #include <mm/gdt.h>
 #include <sched/tss.h>
 
-// Some of these functions account for a very large quantity of code in this kernel.
+#ifndef MAX
+#define MAX(a, b) \
+	(a > b ? a : b)
+#endif
 
-#define GDT_TSS_ACCESS_BYTE 0x89
-#define GDT_TSS_FLAGS       0x4
+#define GDT_MAX_SELECTOR \
+	MAX(GDT_SUPERVISOR_CODE_SELECTOR, \
+	MAX(GDT_SUPERVISOR_DATA_SELECTOR, \
+	MAX(GDT_USERSPACE_CODE_SELECTOR, \
+	MAX(GDT_USERSPACE_DATA_SELECTOR, \
+		GDT_SUPERVISOR_TSS_SELECTOR))))
 
-static gdt_register_t *gdtr;
+#define GDT_LENGTH \
+	(GDT_MAX_SELECTOR + sizeof(gdt_entry_t))
 
-__attribute__((optimize("Os")))
-static gdt32_logical_register_t get_logical_gdtr (gdt_register_t registry) {
-	gdt32_logical_register_t logical_registry;
+typedef enum gdt_accessed_enum {
+	gdt_unaccessed = 0b0,
+	gdt_accessed   = 0b1
+} gdt_accessed_t;
 
-	gdt32_register_decode (registry, &logical_registry);
+typedef enum gdt_code_readable_enum {
+	gdt_code_x  = 0b0,
+	gdt_code_rx = 0b1
+} gdt_code_readable_t;
 
-	return logical_registry;
+typedef enum gdt_data_writable_enum {
+	gdt_data_r  = 0b0,
+	gdt_data_rw = 0b1
+} gdt_data_writable_t;
+
+typedef enum gdt_code_conforming_enum {
+	gdt_code_non_conforming = 0b0,
+	gdt_code_conforming     = 0b1
+} gdt_code_conforming_t;
+
+typedef enum gdt_data_direction_enum {
+	gdt_data_up   = 0b0,
+	gdt_data_down = 0b1
+} gdt_data_direction_t;
+
+typedef enum gdt_executable_enum {
+	gdt_data = 0b0,
+	gdt_code = 0b1
+} gdt_executable_t;
+
+typedef enum gdt_ring_enum {
+	gdt_ring_zero  = 0b00,
+	gdt_ring_one   = 0b01,
+	gdt_ring_two   = 0b10,
+	gdt_ring_three = 0b11
+} gdt_ring_t;
+
+typedef enum gdt_present_enum {
+	gdt_absent  = 0b0,
+	gdt_present = 0b1
+} gdt_present_t;
+
+typedef enum gdt_size_enum {
+	gdt_16bit = 0b0,
+	gdt_32bit = 0b1
+} gdt_size_t;
+
+typedef enum gdt_granularity_enum {
+	gdt_granularity_byte = 0b0,
+	gdt_granularity_page = 0b1
+} gdt_granularity_t;
+
+
+#define GDT_LIMIT_LOW_LENGTH  020
+#define GDT_LIMIT_LOW_OFFSET  000
+#define GDT_LIMIT_HIGH_LENGTH 004
+#define GDT_LIMIT_HIGH_OFFSET (GDT_LIMIT_LOW_LENGTH + GDT_LIMIT_LOW_OFFSET)
+
+#define GDT_BASE_LOW_LENGTH  030
+#define GDT_BASE_LOW_OFFSET  000
+#define GDT_BASE_HIGH_LENGTH 010
+#define GDT_BASE_HIGH_OFFSET (GDT_BASE_LOW_LENGTH + GDT_BASE_LOW_OFFSET)
+
+#define GDT_TSS_ACCESS ((gdt_access_tss_t)0x89)
+
+#define GDT_NULL ((gdt_entry_null_t)0x0000000000000000)
+
+typedef struct __attribute__((packed)) gdt_access_code_struct {
+	gdt_accessed_t        accessed   : 1;
+	gdt_code_readable_t   readable   : 1;
+	gdt_code_conforming_t conforming : 1;
+	gdt_executable_t      executable : 1; // Always gdt_code
+	unsigned char         _rsv0      : 1; // Always 0b1
+	gdt_ring_t            ring       : 2; // Protection level
+	gdt_present_t         present    : 1;
+} gdt_access_code_t;
+
+typedef struct __attribute__((packed)) gdt_access_data_struct {
+	gdt_accessed_t       accessed   : 1;
+	gdt_data_writable_t  writable   : 1;
+	gdt_data_direction_t direction  : 1;
+	gdt_executable_t     executable : 1; // Always gdt_data
+	unsigned char        _rsv0      : 1; // Always 0b1
+	gdt_ring_t           ring       : 2; // Protection level
+	gdt_present_t        present    : 1;
+} gdt_access_data_t;
+
+typedef uint8_t gdt_access_tss_t;
+
+typedef struct __attribute__((packed)) gdt_entry_code_struct {
+	uint32_t          limit_low   : GDT_LIMIT_LOW_LENGTH;
+	uint32_t          base_low    : GDT_BASE_LOW_LENGTH;
+	gdt_access_code_t access;
+	uint32_t          limit_high  : GDT_LIMIT_HIGH_LENGTH;
+	// flags ...
+	unsigned char     _rsv0       : 2; // Always 0b00
+	gdt_size_t        size        : 1;
+	gdt_granularity_t granularity : 1;
+	uint32_t          base_high   : GDT_BASE_HIGH_LENGTH;
+} gdt_entry_code_t;
+
+typedef struct __attribute__((packed)) gdt_entry_data_struct {
+	uint32_t          limit_low   : GDT_LIMIT_LOW_LENGTH;
+	uint32_t          base_low    : GDT_BASE_LOW_LENGTH;
+	gdt_access_data_t access;
+	uint32_t          limit_high  : GDT_LIMIT_HIGH_LENGTH;
+	// flags ...
+	unsigned char     _rsv0       : 2; // Always 0b00
+	gdt_size_t        size        : 1;
+	gdt_granularity_t granularity : 1;
+	uint32_t          base_high   : GDT_BASE_HIGH_LENGTH;
+} gdt_entry_data_t;
+
+typedef struct __attribute__((packed)) gdt_entry_tss_struct {
+	uint32_t          limit_low   : GDT_LIMIT_LOW_LENGTH;
+	uint32_t          base_low    : GDT_BASE_LOW_LENGTH;
+	gdt_access_tss_t  access;
+	uint32_t          limit_high  : GDT_LIMIT_HIGH_LENGTH;
+	// flags ...
+	unsigned char     _rsv0       : 2; // Always 0b00
+	gdt_size_t        size        : 1; // Always gdt_32bit
+	gdt_granularity_t granularity : 1; // Always gdt_granularity_byte
+	uint32_t          base_high   : GDT_BASE_HIGH_LENGTH;
+} gdt_entry_tss_t;
+
+typedef uint64_t gdt_entry_null_t;
+
+typedef union gdt_entry_union {
+	gdt_entry_code_t   code;
+	gdt_entry_data_t   data;
+	gdt_entry_tss_t    tss;
+	gdt_entry_null_t   null;
+} gdt_entry_t;
+
+typedef struct __attribute__((packed)) gdt_register_struct {
+	uint16_t size; // Byte length minus 1;
+	gdt_entry_t *offset;
+} gdt_register_t;
+
+static gdt_register_t gdtr;
+
+static void gdt_populate (tss_t *tss) {
+	const size_t s_null_i = 0;
+	const size_t s_code_i = GDT_SUPERVISOR_CODE_SELECTOR / sizeof(gdt_entry_t);
+	const size_t s_data_i = GDT_SUPERVISOR_DATA_SELECTOR / sizeof(gdt_entry_t);
+	const size_t u_code_i = GDT_USERSPACE_CODE_SELECTOR  / sizeof(gdt_entry_t);
+	const size_t u_data_i = GDT_USERSPACE_DATA_SELECTOR  / sizeof(gdt_entry_t);
+	const size_t s_tss_i  = GDT_SUPERVISOR_TSS_SELECTOR  / sizeof(gdt_entry_t);
+
+	gdtr.offset[s_null_i].null = GDT_NULL;
+
+	gdtr.offset[s_code_i].code = (gdt_entry_code_t){
+		.limit_low   = 0xffff,
+		.base_low    = 0x000000,
+		.access      = {
+			.accessed   = gdt_unaccessed,
+			.readable   = gdt_code_rx,
+			.conforming = gdt_code_conforming,
+			.executable = gdt_code,
+			._rsv0      = 0b1,
+			.ring       = gdt_ring_zero,
+			.present    = gdt_present
+		},
+		.limit_high  = 0xf,
+		.size        = gdt_32bit,
+		.granularity = gdt_granularity_page,
+		.base_high   = 0x00
+	};
+
+	// Data is just like code.
+	gdtr.offset[s_data_i].code = gdtr.offset[s_code_i].code;
+	gdtr.offset[s_data_i].data.access.writable   = gdt_data_rw;
+	gdtr.offset[s_data_i].data.access.direction  = gdt_data_up;
+	gdtr.offset[s_data_i].data.access.executable = gdt_data;
+
+	// Userspace code is just like supervisor.
+	gdtr.offset[u_code_i].code = gdtr.offset[s_code_i].code;
+	gdtr.offset[u_code_i].code.access.ring = gdt_ring_three;
+
+	// Userspace data is just like supervisor.
+	gdtr.offset[u_data_i].data = gdtr.offset[s_data_i].data;
+	gdtr.offset[u_data_i].data.access.ring = gdt_ring_three;
+
+	gdtr.offset[s_tss_i].tss = (gdt_entry_tss_t){
+		.limit_low = sizeof(tss_t),
+		.base_low = (size_t)tss,
+		.access = GDT_TSS_ACCESS,
+		.limit_high = sizeof(tss_t) >> GDT_LIMIT_HIGH_OFFSET,
+		.size = gdt_32bit,
+		.granularity = gdt_granularity_byte,
+		.base_high = (size_t)tss >> GDT_BASE_HIGH_OFFSET
+	};
 }
 
-__attribute__((optimize("Os")))
-static gdt32_logical_entry_t get_logical_entry (gdt32_entry_t entry)  {
-	gdt32_logical_entry_t logical_entry;
-
-	gdt32_decode (entry, &logical_entry);
-
-	return logical_entry;
-}
-
-__attribute__((optimize("Os")))
-static void print_logical_gdtr (gdt32_logical_register_t logical_registry) {
-	kprintf ("mm/gdt: size=%u offset=%p\n",
-		logical_registry.size,
-		logical_registry.offset);
-}
-
-__attribute__((optimize("Os")))
-static void print_logical_entry (gdt32_logical_entry_t logical_entry) {
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-	kprintf ("mm/gdt: limit=0x%05x base=%p\n",
-		logical_entry.limit,
-		(void *)logical_entry.base);
-#pragma GCC diagnostic pop
-	kprintf ("\taccess: %s %s %s %s %d %s\n",
-		logical_entry.access.accessed             ? "AC" : "--",
-		logical_entry.access.read_write           ? "RW" : "--",
-		logical_entry.access.direction_conforming ? "DC" : "--",
-		logical_entry.access.executable           ? "EX" : "--",
-		logical_entry.access.priviledge,
-		logical_entry.access.present              ? "PR" : "--");
-	kprintf ("\tflags: %s %s\n",
-		logical_entry.flags.size        ? "SZ" : "--",
-		logical_entry.flags.granularity ? "GR" : "--");
-}
-
-__attribute__((optimize("Os")))
-static void print_logical_tss (gdt32_logical_entry_t logical_entry) {
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-	kprintf ("mm/gdt: TSS=%p\n", (void *)logical_entry.base);
-#pragma GCC diagnostic pop
-}
-
-__attribute__((optimize("Os")))
-static gdt_access_t gdt_get_access_byte (gdt32_entry_t entry) {
-	return (entry & GDT_ACCESS_DEMASK) >> GDT_ACCESS_OFFSET;
-}
-
-__attribute__((optimize("Os")))
-static gdt32_flags_t gdt_get_flags (gdt32_entry_t entry) {
-	return (entry & GDT_FLAGS_DEMASK) >> GDT_FLAGS_OFFSET;
-}
-
-__attribute__((optimize("Os")))
-static bool gdt_is_null (gdt32_entry_t entry) {
-	return 0 == entry;
-}
-
-static bool gdt_is_tss (gdt32_entry_t);
-
-#define MKGDT_IS_EXEC(name, oper) \
-__attribute__((optimize("Os"))) \
-static bool gdt_is_##name (gdt32_entry_t entry) { \
-	if (gdt_is_null (entry) || gdt_is_tss (entry)) \
-		return false; \
-\
-	gdt32_logical_entry_t logical_entry; \
-	gdt32_decode (entry, &logical_entry); \
-\
-	if (oper logical_entry.access.executable) \
-		return true; \
-\
-	return false; \
-}
-
-MKGDT_IS_EXEC(code, )
-MKGDT_IS_EXEC(data, !)
-
-__attribute__((optimize("Os")))
-static bool gdt_is_tss (gdt32_entry_t entry) {
-	return (GDT_TSS_ACCESS_BYTE == gdt_get_access_byte (entry) &&
-			GDT_TSS_FLAGS       == gdt_get_flags       (entry));
-}
-
-__attribute__((optimize("Os")))
-static segment_selector_t gdt_get_segment_selector (size_t i) {
-	return GDT_SELECTOR_INC * i;
-}
-
-__attribute__((optimize("Os")))
-static void __attribute__((noinline)) gdt_reload () {
-	// TODO: allow code segement selectors other than 0x08.
+static void gdt_load () {
 	asm volatile (
-		"		lgdt		(%0);\n"
-		"		ljmp		$0x08,				$gdt_reload_target;\n"
-		"gdt_reload_target:\n"
+		"		lgdt	(%0);\n"
+		"		ljmp	%1,				$.Lgdt_load_fin;\n"
+		".Lgdt_load_fin:\n"
 		"		nop;\n"
 		:
-		:"r"(gdtr));
+		:"r"(&gdtr), "i"(GDT_SUPERVISOR_CODE_SELECTOR));
+
+	kputs ("mm/gdt: GDT loaded successfuly.\n");
 }
 
-__attribute__((optimize("Os")))
-void gdt_register (gdt_register_t *registry) {
-	gdt32_logical_register_t logical_registry = get_logical_gdtr (*registry);
+void gdt_init (tss_t *tss) {
+	// One NULL selector, a code and data selector for supervisor and userland, and one
+	// TSS selector.
+	gdtr.size = GDT_LENGTH - 1;
 
-	const size_t gdt_entries_length = logical_registry.size * sizeof(gdt32_entry_t);
-
-	gdt32_entry_t *new_entries = malloc (gdt_entries_length);
-	gdt_register_t *new_registry = malloc (sizeof(gdt_register_t));
-
-	memcpy (new_entries, logical_registry.offset, gdt_entries_length);
-
-	logical_registry.offset = new_entries;
-	*new_registry = gdt32_register_encode (logical_registry);
-
-	gdtr = new_registry;
-
-	gdt_reload ();
-}
-
-__attribute__((optimize("Os")))
-void gdt_dump_entries () {
-	size_t i;
-
-	gdt32_logical_register_t logical_registry = get_logical_gdtr (*gdtr);
-
-	kputs ("mm/gdt: GDT registry:\n");
-	print_logical_gdtr (logical_registry);
-
-	kprintf ("mm/gdt: GDT entries %d:\n", logical_registry.size);
-
-	// Skip the first entry because it is the obligitory NULL entry.
-	for (i = 0; logical_registry.size > i; ++i) {
-		gdt32_entry_t entry = logical_registry.offset[i];
-
-		if (0 == i) {
-			if (0 == entry)
-				kputs ("mm/gdt: NULL\n");
-			else
-				kputs ("mm/gdt: *NOT* NULL\n");
-		} else {
-			gdt32_logical_entry_t logical_entry = get_logical_entry (entry);
-
-			// Entry changes after lgdt and/or ltr??
-			if (gdt_is_tss (entry))
-				// Assume TSS
-				print_logical_tss (logical_entry);
-			else
-				print_logical_entry (logical_entry);
-		}
-	}
-}
-
-#define MKGDT_GET_SELECTOR(type) \
-__attribute__((optimize("Os"))) \
-segment_selector_t gdt_get_nth_##type##_selector (size_t n) { \
-	const gdt32_logical_register_t logical_registry = get_logical_gdtr (*gdtr); \
-\
-	size_t i; \
-\
-	for (i = 0; logical_registry.size > i; ++i) { \
-		gdt32_entry_t entry = logical_registry.offset[i]; \
-\
-		if (gdt_is_##type (entry)) \
-			if (!n--) \
-				return gdt_get_segment_selector (i); \
-	} \
-\
-	/* Invalid valid selector. */ \
-	return 0x01; \
-}
-
-MKGDT_GET_SELECTOR(null)
-MKGDT_GET_SELECTOR(code)
-MKGDT_GET_SELECTOR(data)
-MKGDT_GET_SELECTOR(tss)
-
-__attribute__((optimize("Os")))
-segment_selector_t gdt_add_tss (tss_t *tss_ptr) {
-	gdt32_logical_register_t logical_registry = get_logical_gdtr (*gdtr);
-
-	const size_t gdt_entries_old_length = logical_registry.size * sizeof(gdt32_entry_t);
-
-	gdt32_entry_t *new_entries = realloc (
-			logical_registry.offset, gdt_entries_old_length + 1);
-	if (!new_entries) {
-		kputs ("mm/gdt: Failed to reallocate GDT!\n");
+	gdtr.offset = malloc (GDT_LENGTH);
+	if (!gdtr.offset) {
+		kputs ("mm/gdt: Failed to allocate GDT entries!\n");
 		kpanic ();
 	}
 
-	if (logical_registry.offset != new_entries)
-		logical_registry.offset = new_entries;
+	gdt_populate (tss);
 
-	logical_registry.size += 1;
-
-	logical_registry.offset[logical_registry.size - 1] =
-		(((gdt32_entry_t)(sizeof(tss_t)   & GDT_LIMIT_LOW_BITMASK))  << (GDT_LIMIT_LOW_OFFSET))                         |
-		(((gdt32_entry_t)((size_t)tss_ptr & GDT_BASE_LOW_BITMASK))   << (GDT_BASE_LOW_OFFSET))                          |
-		(((gdt32_entry_t)(GDT_TSS_ACCESS_BYTE))                      << (GDT_ACCESS_OFFSET))                            |
-		(((gdt32_entry_t)(sizeof(tss_t)   & GDT_LIMIT_HIGH_BITMASK)) << (GDT_LIMIT_HIGH_OFFSET - GDT_LIMIT_LOW_LENGTH)) |
-		(((gdt32_entry_t)(GDT_TSS_FLAGS))                            << (GDT_FLAGS_OFFSET))                             |
-		(((gdt32_entry_t)((size_t)tss_ptr & GDT_BASE_HIGH_BITMASK))  << (GDT_BASE_HIGH_OFFSET - GDT_LIMIT_LOW_LENGTH));
-
-	*gdtr = gdt32_register_encode (logical_registry);
-
-	gdt_reload ();
-
-	return gdt_get_segment_selector (logical_registry.size - 1);
+	gdt_load ();
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

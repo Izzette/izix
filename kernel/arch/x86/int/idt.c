@@ -22,7 +22,7 @@ void idt_init () {
 	for (i = 0; IDT_NUMBER_OF_INTERUPTS > i; ++i) {
 		idt_entry_logical_t logical_entry = {
 			.isr_offset = NULL,
-			.selector = gdt_get_first_code_selector (),
+			.selector = GDT_SUPERVISOR_CODE_SELECTOR,
 			.type = IDT_I386_INTERUPT_GATE,
 			.storage = false,
 			.priviledge = 0,
