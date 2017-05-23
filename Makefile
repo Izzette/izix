@@ -25,7 +25,14 @@ endef
 
 # Earlier boot objects
 object_start := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_start.o
-objects_boot := kernel/arch/$(ARCH)/boot/$(BOOTLOADER)_main.o
+objects_boot :=
+objects_boot := $(addprefix kernel/boot/,$(objects_boot))
+
+ifeq (x86,$(ARCH))
+objects_boot_x86 := $(BOOTLOADER)_main.o null_handler.o
+objects_boot_x86 := $(addprefix kernel/arch/$(ARCH)/boot/,$(objects_boot_x86))
+objects_boot := $(objects_boot) $(objects_boot_x86)
+endif
 
 # Our custom .init and .fini sections.
 objects_source_crt := crti.o crtn.o
@@ -241,6 +248,14 @@ CFLAGS := \
 	-ffreestanding \
 	-Werror=format \
 	$(addprefix -DARCH_,$(shell echo $(ARCH) | tr a-z A-Z))
+
+ifeq (x86,$(ARCH))
+ifeq (izixboot,$(BOOTLOADER))
+CFLAGS := \
+	$(CFLAGS) \
+	-DIZIX_SUPPORT_E820_3X
+endif
+endif
 
 # Our assembling flags.
 ASFLAGS ?= \
