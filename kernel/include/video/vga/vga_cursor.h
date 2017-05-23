@@ -1,4 +1,4 @@
-// kernel/include/video/vga_text.h
+// kernel/include/video/vga/vga_text.h
 
 #ifndef IZIX_VGA_CURSOR_H
 #define IZIX_VGA_CURSOR_H 1

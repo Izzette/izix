@@ -1,10 +1,10 @@
-// kernel/drivers/video/vga_cursor.c
+// kernel/drivers/video/vga/vga_cursor.c
 
 #include <stddef.h>
 
 #include <asm/io.h>
 
-#include <video/vga_text.h>
+#include <video/vga/vga_text.h>
 
 void vga_cursor_set (size_t x, size_t y) {
 	vga_text_size_t size = vga_text_get_size ();

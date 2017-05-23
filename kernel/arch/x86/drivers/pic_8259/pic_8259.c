@@ -4,6 +4,9 @@
 #include <int/idt.h>
 #include <irq/irq.h>
 #include <irq/irq_vectors.h>
+#include <mm/paging.h>
+#include <dev/dev_types.h>
+#include <dev/dev_driver.h>
 
 // Some of these functions are used by IRQ handlers, which must be very fast.
 
@@ -29,6 +32,8 @@
 #define ICW4_BUF_SLAVE  0x08 // Buffered mode/slave
 #define ICW4_BUF_MASTER 0x0C // Buffered mode/master
 #define ICW4_SFNM       0x10 // Special fully nested (not)
+
+static dev_driver_t pic_8259_driver;
 
 static bool pic_8259_is_master_irq (irq_t irq) {
 	return 8 > irq;
@@ -58,6 +63,24 @@ static uint16_t pic_8259_get_pic_data_port (irq_t irq) {
 		return PIC_MASTER_DATA;
 
 	return PIC_SLAVE_DATA;
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static page_t *pic_8259_next_page_mapping (dev_driver_t *this, page_t *last_page) {
+	return NULL;
+}
+#pragma GCC diagnostic pop
+
+__attribute__((constructor))
+void pic_8259_construct () {
+	pic_8259_driver = (dev_driver_t){
+		.pimpl = NULL,
+		.dev = {
+			.maj = dev_maj_arch,
+			.min = dev_min_arch_pic_8259
+		},
+		.next_page_mapping = pic_8259_next_page_mapping
+	};
 }
 
 __attribute__((optimize("O3")))
@@ -125,5 +148,10 @@ bool pic_8259_is_masked (irq_t irq) {
 
 	return 0 != (inb (port) & (1 << relative_irq));
 }
+
+dev_driver_t *pic_8259_get_device_driver () {
+	return &pic_8259_driver;
+}
+
 
 // vim: set ts=4 sw=4 noet syn=c:

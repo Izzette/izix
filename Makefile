@@ -45,12 +45,15 @@ objects_source_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_source_crt)
 objects_bin_crt := crtbegin.o crtend.o
 objects_bin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_bin_crt))
 
+# Our VGA drivers
+objects_drivers_video_vga := vga_text.o vga_cursor.o
+objects_drivers_video_vga := $(addprefix kernel/drivers/video/vga/,$(objects_drivers_video_vga))
+
 # Our video drivers.
-objects_drivers_video := vga_text.o vga_cursor.o
-objects_drivers_video := $(addprefix kernel/drivers/video/,$(objects_drivers_video))
+objects_drivers_video := $(objects_drivers_video_vga)
 
 # Our TTY drivers.
-objects_drivers_tty := tty_driver.o tty_vga_text.o
+objects_drivers_tty := tty_chardev_driver.o tty_vga_text.o
 objects_drivers_tty := $(addprefix kernel/drivers/tty/,$(objects_drivers_tty))
 
 # All of our drivers.
@@ -62,6 +65,9 @@ objects_drivers_x86_pic_8259 := \
 	$(addprefix kernel/arch/$(ARCH)/drivers/pic_8259/,$(objects_drivers_x86_pic_8259))
 objects_drivers := $(objects_drivers) $(objects_drivers_x86_pic_8259)
 endif
+
+objects_dev := dev.o
+objects_dev := $(addprefix kernel/dev/,$(objects_dev))
 
 # Our kprint subsystem.
 objects_kprint := kprint.o
@@ -156,6 +162,7 @@ asm_source_objects := \
 c_source_objects := \
 	$(objects_boot) \
 	$(objects_drivers) \
+	$(objects_dev) \
 	$(objects_kprint) \
 	$(objects_kpanic) \
 	$(objects_mm) \
@@ -196,6 +203,7 @@ objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 objects_kernel := \
 	$(objects_boot) \
 	$(objects_drivers) \
+	$(objects_dev) \
 	$(objects_mm) \
 	$(objects_sched) \
 	$(objects_sched_asm) \

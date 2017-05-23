@@ -3,12 +3,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <tty/tty_driver.h>
+#include <dev/dev.h>
+#include <tty/tty_chardev_driver.h>
 #include <tty/tty_vga_text.h>
 #include <kprint/kprint.h>
+#include <asm/toggle_int.h>
 #include <mm/malloc.h>
 #include <mm/freemem.h>
-#include <asm/toggle_int.h>
 #include <mm/gdt.h>
 #include <mm/e820.h>
 #include <mm/paging.h>
@@ -47,7 +48,7 @@ void kernel_main (
 	freemem_region_t
 		kernel_region, null_region, stack_region,
 		int_stack_region, freemem_internal_region,
-		tty_driver_region;
+		tty_chardev_driver_region;
 
 	// TODO: Get the actually start and length of the kernel by parsing its own ELF at
 	// runtime or by createing all the nessesary symbols in the linker script.
@@ -66,22 +67,24 @@ void kernel_main (
 	freemem_internal_region = new_freemem_region (
 		freemem_region_end (int_stack_region), // Exclusive max.
 		9 * PAGE_SIZE);
-	tty_driver_region = new_freemem_region (
+	tty_chardev_driver_region = new_freemem_region (
 		freemem_region_end (freemem_internal_region), // Exclusive max.
-		sizeof(tty_driver_t));
+		sizeof(tty_chardev_driver_t));
 
-	if (tty_driver_region.length % MALLOC_ALIGNMENT)
-		tty_driver_region.length +=
-			MALLOC_ALIGNMENT - sizeof(tty_driver_t) % MALLOC_ALIGNMENT;
+	if (tty_chardev_driver_region.length % MALLOC_ALIGNMENT)
+		tty_chardev_driver_region.length +=
+			MALLOC_ALIGNMENT - sizeof(tty_chardev_driver_t) % MALLOC_ALIGNMENT;
 
-	volatile tty_driver_t *tty_driver_vga_text = tty_driver_region.p;
+	volatile tty_chardev_driver_t *tty_chardev_driver_vga_text =
+		tty_chardev_driver_region.p;
 
-	*tty_driver_vga_text = new_tty_vga_driver ();
+	*tty_chardev_driver_vga_text = new_tty_vga_driver ();
 
-	tty_driver_vga_text->init ((tty_driver_t *)tty_driver_vga_text);
+	tty_chardev_driver_vga_text->init (
+		(tty_chardev_driver_t *)tty_chardev_driver_vga_text);
 
 	kprint_init ();
-	set_kprint_tty_driver (tty_driver_vga_text);
+	set_kprint_tty_chardev_driver (tty_chardev_driver_vga_text);
 
 	kprintf (
 		"boot/izixboot_main: Provided command line:\n"
@@ -102,15 +105,19 @@ void kernel_main (
 	e820_3x_print ();
 	e820_3x_add_freemem ();
 
-	freemem_remove_region (tty_driver_region);
+	freemem_remove_region (tty_chardev_driver_region);
 	freemem_remove_region (freemem_internal_region);
 	freemem_remove_region (int_stack_region);
 	freemem_remove_region (kernel_region);
 	freemem_remove_region (stack_region);
 	freemem_remove_region (null_region);
 
+	// Adding tty driver must be deleayed until kprint and fremeem are initialized.
+	dev_add (tty_chardev_driver_vga_text->dev_driver);
+
 	tss_init (freemem_region_end (int_stack_region));
 
+	// TSS must be initialized before tss_get () does any good.
 	gdt_init (tss_get ());
 
 	tss_load (GDT_SUPERVISOR_TSS_SELECTOR);
@@ -139,6 +146,7 @@ void kernel_main (
 	idt_set_isr (IRQ_VECTOR_IRQ15, isr_irq15);
 
 	pic_8259_reinit ();
+	dev_add (pic_8259_get_device_driver ());
 
 	irq_init ();
 

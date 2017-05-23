@@ -1,5 +1,6 @@
 kernel/arch/x86/boot/izixboot_main.o: \
-		kernel/include/tty/tty_driver.h \
+		kernel/include/dev/dev.h \
+		kernel/include/tty/tty_chardev_driver.h \
 		kernel/include/tty/tty_vga_text.h \
 		kernel/include/kprint/kprint.h \
 		kernel/include/mm/malloc.h \

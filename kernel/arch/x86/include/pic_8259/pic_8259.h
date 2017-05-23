@@ -4,12 +4,14 @@
 #define IZIX_PIC_8259_H 1
 
 #include <irq/irq.h>
+#include <dev/dev_driver.h>
 
 void pic_8259_mask (irq_t);
 void pic_8259_unmask (irq_t);
 bool pic_8259_is_masked (irq_t);
 void pic_8259_send_eoi (irq_t);
 void pic_8259_reinit ();
+dev_driver_t *pic_8259_get_device_driver ();
 
 #endif
 

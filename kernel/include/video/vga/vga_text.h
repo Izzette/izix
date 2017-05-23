@@ -1,10 +1,12 @@
-// kernel/include/video/vga_text.h
+// kernel/include/video/vga/vga_text.h
 
 #ifndef IZIX_VGA_TEXT_H
 #define IZIX_VGA_TEXT_H 1
 
 #include <stddef.h>
 #include <stdint.h>
+
+#include <dev/dev_driver.h>
 
 /* Hardware text mode color constants. */
 enum vga_color {
@@ -49,6 +51,7 @@ vga_text_size_t vga_text_get_size ();
 // WARN: safe inputs are assumed.
 void vga_text_put_entry (vga_text_entry_t, size_t, size_t);
 void vga_text_scoll_one_line ();
+dev_driver_t *vga_text_get_device_driver ();
 
 // WARN: safe inputs are assumed.
 static inline vga_text_color_t vga_text_mkcolor (uint8_t fg, uint8_t bg) {

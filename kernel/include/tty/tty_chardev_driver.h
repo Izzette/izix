@@ -1,4 +1,4 @@
-// kernel/include/tty/tty_driver.h
+// kernel/include/tty/tty_chardev_driver.h
 
 #ifndef IZIX_TTY_DRIVER_H
 #define IZIX_TTY_DRIVER_H 1
@@ -9,17 +9,20 @@
 
 #include <tty/tty.h>
 #include <sched/mutex.h>
+#include <dev/dev_driver.h>
 
-enum tty_driver_error {
-	TTY_DRIVER_NOERR = 0, // No error occurred.
-	TTY_DRIVER_EINIT = 1  // Failed to intialize chardev for tty.
+enum tty_chardev_driver_error {
+	TTY_CHARDEV_DRIVER_NOERR = 0, // No error occurred.
+	TTY_CHARDEV_DRIVER_EINIT = 1  // Failed to intialize chardev for tty.
 };
 
-typedef struct tty_driver_struct tty_driver_t;
-
-typedef struct tty_driver_struct {
+// TTY chardev driver.
+typedef struct tty_chardev_driver_struct tty_chardev_driver_t;
+typedef struct tty_chardev_driver_struct {
 // Private data.
 	void *pimpl;
+// Device driver
+	dev_driver_t *dev_driver;
 // Supports position.
 	bool support_position;
 // Supports cursor position.
@@ -41,37 +44,37 @@ typedef struct tty_driver_struct {
 // color/position modification to update.
 	mutex_t mutex_base;
 // Initialize the terminal, returns true on success, false on failure.
-	bool (*init) (tty_driver_t *this);
+	bool (*init) (tty_chardev_driver_t *this);
 // De-initialize the terminal and all its resources,
 // returns true on success, false on failure.
-	bool (*release) (tty_driver_t *this);
+	bool (*release) (tty_chardev_driver_t *this);
 // Write one character, wchar_t will be masked by (1 << (extra_char_width + 2) - 1).
-	void (*putc) (tty_driver_t *this, wchar_t c);
+	void (*putc) (tty_chardev_driver_t *this, wchar_t c);
 // If width or height are 0, there is no width or height respectively.
-	tty_size_t (*get_size) (tty_driver_t *this);
+	tty_size_t (*get_size) (tty_chardev_driver_t *this);
 // Do all position related updates, should be called after changing position.
-	void (*position_updates) (tty_driver_t *this);
+	void (*position_updates) (tty_chardev_driver_t *this);
 // Do all color related updates, should be called after changing fg_color or bg_color.
-	void (*color_updates) (tty_driver_t *this);
-} tty_driver_t;
+	void (*color_updates) (tty_chardev_driver_t *this);
+} tty_chardev_driver_t;
 
-void tty_safe_position_use_size (tty_driver_t *driver, tty_size_t size);
-bool tty_wrap_console_use_size (tty_driver_t *driver, tty_size_t size);
+void tty_chardev_safe_position_use_size (tty_chardev_driver_t *driver, tty_size_t size);
+bool tty_chardev_wrap_console_use_size (tty_chardev_driver_t *driver, tty_size_t size);
 
-static inline void tty_safe_position (tty_driver_t *driver) {
+static inline void tty_chardev_safe_position (tty_chardev_driver_t *driver) {
 	tty_size_t size = driver->get_size (driver);
 
-	tty_safe_position_use_size (driver, size);
+	tty_chardev_safe_position_use_size (driver, size);
 }
 
-static inline void tty_wrap_console (tty_driver_t *driver) {
+static inline void tty_chardev_wrap_console (tty_chardev_driver_t *driver) {
 	tty_size_t size = driver->get_size (driver);
 
-	tty_wrap_console_use_size (driver, size);
+	tty_chardev_wrap_console_use_size (driver, size);
 }
 
 __attribute__((optimize("O3")))
-static inline mutex_t *tty_driver_get_mutex (volatile tty_driver_t *driver) {
+static inline mutex_t *tty_chardev_driver_get_mutex (volatile tty_chardev_driver_t *driver) {
 	return &driver->mutex_base;
 }
 

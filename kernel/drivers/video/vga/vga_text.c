@@ -1,9 +1,13 @@
-// kernel/drivers/video/vga_text.c
+// kernel/drivers/video/vga/vga_text.c
 
 #include <stddef.h>
 
-#include <video/vga_text.h>
-#include <video/vga_cursor.h>
+#include <video/vga/vga_text.h>
+#include <video/vga/vga_cursor.h>
+#include <dev/dev_types.h>
+#include <dev/dev_driver.h>
+
+static dev_driver_t vga_text_driver;
 
 static vga_text_size_t vga_text_size = {
 	.width = 80,
@@ -11,6 +15,31 @@ static vga_text_size_t vga_text_size = {
 };
 
 static vga_text_entry_t *vga_text_buffer = (vga_text_entry_t *)0xb8000;
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static page_t *vga_text_next_page_mapping (dev_driver_t *this, page_t *last_page) {
+	// VGA text buffer is 4000 bytes long, so it fits neatly in one page!
+
+	switch ((size_t)last_page) {
+		case (size_t)NULL:
+			return (page_t *)vga_text_buffer;
+		default:
+			return NULL;
+	}
+}
+#pragma GCC diagnostic pop
+
+__attribute__((constructor))
+void vga_text_construct () {
+	vga_text_driver = (dev_driver_t){
+		.pimpl = NULL, // No need for pimpl (yet).
+		.dev = {
+			.maj = dev_maj_chardev,
+			.min = 0 // Only ever one VGA device.
+		},
+		.next_page_mapping = vga_text_next_page_mapping
+	};
+}
 
 void vga_text_init () {
 	size_t x, y;
@@ -58,5 +87,10 @@ void vga_text_scoll_one_line () {
 	for (dx = 0, dy = vga_text_size.height - 1; dx < vga_text_size.width; ++dx)
 		vga_text_put_entry (entry, dx, dy);
 }
+
+dev_driver_t *vga_text_get_device_driver () {
+	return &vga_text_driver;
+}
+
 
 // vim: set ts=4 sw=4 noet syn=c:

@@ -3,10 +3,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include <video/vga_text.h>
-#include <video/vga_cursor.h>
+#include <sched/mutex.h>
+#include <video/vga/vga_text.h>
+#include <video/vga/vga_cursor.h>
 #include <tty/tty.h>
-#include <tty/tty_driver.h>
+#include <tty/tty_chardev_driver.h>
 
 #define VGA_COLOR_FG_DEFAULT VGA_COLOR_LIGHT_GREY
 #define VGA_COLOR_BG_DEFAULT VGA_COLOR_BLACK
@@ -24,20 +25,21 @@ static tty_vga_privdata_t tty_vga_privdata = {
 	.virtual_length = 0
 };
 
-static bool tty_vga_init (tty_driver_t *);
-static bool tty_vga_release (tty_driver_t *);
-static void tty_vga_putc (tty_driver_t *, wchar_t);
-static tty_size_t tty_vga_get_size (tty_driver_t *);
-static void tty_vga_position_updates (tty_driver_t *);
-static void tty_vga_color_updates (tty_driver_t *);
+static bool tty_vga_init (tty_chardev_driver_t *);
+static bool tty_vga_release (tty_chardev_driver_t *);
+static void tty_vga_putc (tty_chardev_driver_t *, wchar_t);
+static tty_size_t tty_vga_get_size (tty_chardev_driver_t *);
+static void tty_vga_position_updates (tty_chardev_driver_t *);
+static void tty_vga_color_updates (tty_chardev_driver_t *);
 
-static tty_driver_t tty_vga_prototype = {
+static tty_chardev_driver_t tty_vga_prototype = {
 	.pimpl = NULL,  // Uninitialized
+	.dev_driver = NULL,
 	.support_position = true,
 	.support_color = true,
 	.extra_char_width = 0,
 	.term_descriptor = "VGA_TEXT",
-	.errno = TTY_DRIVER_NOERR,
+	.errno = TTY_CHARDEV_DRIVER_NOERR,
 	.position = { .x = 0, .y = 0 },
 	.fg_color = VGA_COLOR_FG_DEFAULT,
 	.bg_color = VGA_COLOR_BG_DEFAULT,
@@ -51,7 +53,7 @@ static tty_driver_t tty_vga_prototype = {
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-static bool tty_vga_init (tty_driver_t *this) {
+static bool tty_vga_init (tty_chardev_driver_t *this) {
 	this->pimpl = &tty_vga_privdata;
 	this->mutex_base = new_mutex ();
 
@@ -60,13 +62,13 @@ static bool tty_vga_init (tty_driver_t *this) {
 	return true;
 }
 
-static bool tty_vga_release (tty_driver_t *this) {
+static bool tty_vga_release (tty_chardev_driver_t *this) {
 	// nop
 
 	return true;
 }
 
-static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
+static void tty_vga_putc (tty_chardev_driver_t *this, wchar_t c) {
 	tty_vga_privdata_t *privdata_ptr = (tty_vga_privdata_t *)this->pimpl;
 	tty_size_t size = this->get_size (this);
 	vga_text_entry_t entry;
@@ -92,7 +94,7 @@ static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
 
 				this->position.x += 1;
 
-				need_scroll = tty_wrap_console_use_size (this, size);
+				need_scroll = tty_chardev_wrap_console_use_size (this, size);
 				if (need_scroll)
 					vga_text_scoll_one_line ();
 			}
@@ -108,14 +110,14 @@ static void tty_vga_putc (tty_driver_t *this, wchar_t c) {
 			privdata_ptr->virtual_length += 1;
 	}
 
-	need_scroll = tty_wrap_console_use_size (this, size);
+	need_scroll = tty_chardev_wrap_console_use_size (this, size);
 	if (need_scroll)
 		vga_text_scoll_one_line ();
 
 	vga_cursor_set (this->position.x, this->position.y);
 }
 
-static tty_size_t tty_vga_get_size (tty_driver_t *this) {
+static tty_size_t tty_vga_get_size (tty_chardev_driver_t *this) {
 	const vga_text_size_t vga_text_size = vga_text_get_size ();
 
 	tty_size_t tty_size = {
@@ -126,13 +128,13 @@ static tty_size_t tty_vga_get_size (tty_driver_t *this) {
 	return tty_size;
 }
 
-static void tty_vga_position_updates (tty_driver_t *this) {
-	tty_safe_position (this);
+static void tty_vga_position_updates (tty_chardev_driver_t *this) {
+	tty_chardev_safe_position (this);
 
 	vga_cursor_set (this->position.x, this->position.y);
 }
 
-static void tty_vga_color_updates (tty_driver_t *this) {
+static void tty_vga_color_updates (tty_chardev_driver_t *this) {
 	tty_vga_privdata_t *privdata_ptr = (tty_vga_privdata_t *)this->pimpl;
 
 	if (VGA_COLOR_MIN > this->fg_color || VGA_COLOR_XMAX <= this->fg_color)
@@ -145,8 +147,12 @@ static void tty_vga_color_updates (tty_driver_t *this) {
 	privdata_ptr->vga_color.bg = this->bg_color;
 }
 
-tty_driver_t new_tty_vga_driver () {
-	return tty_vga_prototype;
+tty_chardev_driver_t new_tty_vga_driver () {
+	tty_chardev_driver_t driver = tty_vga_prototype;
+
+	driver.dev_driver = vga_text_get_device_driver ();
+
+	return driver;
 }
 
 #pragma GCC diagnostic pop
