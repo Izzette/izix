@@ -11,6 +11,22 @@
 #define PAGE_ALIGN_UPPER_WIDTH 024
 #define PAGE_ALIGN_LOWER_WIDTH (8 * sizeof(void *) - PAGE_ALIGN_UPPER_WIDTH)
 
+typedef struct page_attrs_struct {
+	bool    present;
+	bool    writable;
+	bool    user;
+	bool    write_through;
+	bool    cache_disabled;
+	bool    accessed;
+	bool    dirty;
+	bool    global;
+} page_attrs_t;
+
+typedef struct page_table_entry_logical_struct {
+	page_attrs_t attrs;
+	page_t *physical_page_offset;
+} page_table_entry_logical_t;
+
 typedef struct __attribute__((packed)) page_table_entry_struct {
 	unsigned char          present              : 1;
 	unsigned char          writable             : 1;
@@ -25,17 +41,17 @@ typedef struct __attribute__((packed)) page_table_entry_struct {
 	size_t                 physical_page_offset : 20;
 } page_table_entry_t;
 
-typedef struct page_table_entry_logical_struct {
-	bool    present;
-	bool    writable;
-	bool    user;
-	bool    write_through;
-	bool    cache_disabled;
-	bool    accessed;
-	bool    dirty;
-	bool    global;
-	page_t *physical_page_offset;
-} page_table_entry_logical_t;
+typedef struct page_directory_entry_logical_struct {
+	bool                present;
+	bool                writable;
+	bool                user;
+	bool                write_through;
+	bool                cache_disabled;
+	bool                accessed;
+	bool                size;
+	bool                ignore;
+	page_table_entry_t *page_table_base;
+} page_directory_entry_logical_t;
 
 typedef struct __attribute__((packed)) page_directory_entry_struct {
 	unsigned char          present         : 1;
@@ -51,17 +67,7 @@ typedef struct __attribute__((packed)) page_directory_entry_struct {
 	size_t                 page_table_base : 20;
 } page_directory_entry_t;
 
-typedef struct page_directory_entry_logical_struct {
-	bool                present;
-	bool                writable;
-	bool                user;
-	bool                write_through;
-	bool                cache_disabled;
-	bool                accessed;
-	bool                size;
-	bool                ignore;
-	page_table_entry_t *page_table_base;
-} page_directory_entry_logical_t;
+typedef page_directory_entry_t *paging_data_t;
 
 static inline size_t page_get_aligned_upper_bits (void *aligned_ptr) {
 #pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
@@ -79,15 +85,15 @@ static inline page_table_entry_t page_table_entry_encode (
 		page_table_entry_logical_t logical_entry
 ) {
 	page_table_entry_t entry = {
-		.present              = logical_entry.present        ? 0b1 : 0b0,
-		.writable             = logical_entry.writable       ? 0b1 : 0b0,
-		.user                 = logical_entry.user           ? 0b1 : 0b0,
-		.write_through        = logical_entry.write_through  ? 0b1 : 0b0,
-		.cache_disabled       = logical_entry.cache_disabled ? 0b1 : 0b0,
-		.accessed             = logical_entry.accessed       ? 0b1 : 0b0,
-		.dirty                = logical_entry.dirty          ? 0b1 : 0b0,
+		.present              = logical_entry.attrs.present        ? 0b1 : 0b0,
+		.writable             = logical_entry.attrs.writable       ? 0b1 : 0b0,
+		.user                 = logical_entry.attrs.user           ? 0b1 : 0b0,
+		.write_through        = logical_entry.attrs.write_through  ? 0b1 : 0b0,
+		.cache_disabled       = logical_entry.attrs.cache_disabled ? 0b1 : 0b0,
+		.accessed             = logical_entry.attrs.accessed       ? 0b1 : 0b0,
+		.dirty                = logical_entry.attrs.dirty          ? 0b1 : 0b0,
 		._rsv                 = 0,
-		.global               = logical_entry.global         ? 0b1 : 0b0,
+		.global               = logical_entry.attrs.global         ? 0b1 : 0b0,
 		.os_defined           = 0,
 		.physical_page_offset = page_get_aligned_upper_bits (
 			logical_entry.physical_page_offset)
@@ -100,14 +106,16 @@ static inline page_table_entry_logical_t page_table_entry_decode (
 		page_table_entry_t entry
 ) {
 	page_table_entry_logical_t logical_entry = {
-		.present              = entry.present        ? true : false,
-		.writable             = entry.writable       ? true : false,
-		.user                 = entry.user           ? true : false,
-		.write_through        = entry.write_through  ? true : false,
-		.cache_disabled       = entry.cache_disabled ? true : false,
-		.accessed             = entry.accessed       ? true : false,
-		.dirty                = entry.dirty          ? true : false,
-		.global               = entry.global         ? true : false,
+		.attrs = {
+			.present              = entry.present        ? true : false,
+			.writable             = entry.writable       ? true : false,
+			.user                 = entry.user           ? true : false,
+			.write_through        = entry.write_through  ? true : false,
+			.cache_disabled       = entry.cache_disabled ? true : false,
+			.accessed             = entry.accessed       ? true : false,
+			.dirty                = entry.dirty          ? true : false,
+			.global               = entry.global         ? true : false
+		},
 		.physical_page_offset = page_get_aligned_ptr (
 			entry.physical_page_offset)
 	};
@@ -155,8 +163,15 @@ static inline page_directory_entry_logical_t page_directory_entry_decode (
 	return logical_entry;
 }
 
-void paging_init ();
-void paging_load ();
+void paging_init (paging_data_t *);
+void paging_enable (paging_data_t *);
+void paging_switch (paging_data_t *);
+bool paging_table_present (page_t *, paging_data_t *);
+void paging_set_map (page_t *, page_t *, paging_data_t *);
+page_t *paging_get_map (page_t *, paging_data_t *);
+void paging_set_attrs (page_t *, page_attrs_t, paging_data_t *);
+page_attrs_t paging_get_attrs (page_t *, paging_data_t *);
+page_attrs_t paging_compatable_attrs (page_attrs_t, page_attrs_t);
 
 #endif
 

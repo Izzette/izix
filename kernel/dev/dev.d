@@ -4,4 +4,6 @@ kernel/dev/dev.o: \
 		kernel/include/kprint/kprint.h \
 		kernel/include/kpanic/kpanic.h \
 		kernel/include/dev/dev_types.h \
-		kernel/include/dev/dev_driver.h
+		kernel/include/dev/dev_driver.h \
+		kernel/arch/$(ARCH)/include/mm/page.h \
+		kernel/arch/$(ARCH)/include/mm/paging.h

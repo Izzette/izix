@@ -255,6 +255,7 @@ CFLAGS := \
 	-I./libk/include \
 	-ffreestanding \
 	-Werror=format \
+	-DIZIX \
 	$(addprefix -DARCH_,$(shell echo $(ARCH) | tr a-z A-Z))
 
 ifeq (x86,$(ARCH))

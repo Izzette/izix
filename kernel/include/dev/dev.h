@@ -8,6 +8,8 @@
 
 void dev_add (dev_driver_t *);
 void dev_remove (dev_t);
+void dev_map (dev_t, paging_data_t *);
+void dev_map_all (paging_data_t *);
 
 #endif
 

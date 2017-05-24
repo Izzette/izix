@@ -15,9 +15,10 @@ typedef struct dev_driver_struct {
 // Get the next physical page address needed for this device driver.
 // Example usage:
 //   page_t *pg = NULL;
-//   while ((pg = driver->next_page_mapping (pg)))
+//   bool need_write;
+//   while ((pg = driver->next_page_mapping (driver, pg, &need_write)))
 //     <...>
-	page_t *(*next_page_mapping) (dev_driver_t *, page_t *);
+	page_t *(*next_page_mapping) (dev_driver_t *, page_t *, bool *);
 } dev_driver_t;
 
 #endif

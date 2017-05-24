@@ -6,8 +6,17 @@
 #include <video/vga/vga_cursor.h>
 #include <dev/dev_types.h>
 #include <dev/dev_driver.h>
+#include <mm/page.h>
 
-static dev_driver_t vga_text_driver;
+static page_t *vga_text_next_page_mapping (dev_driver_t *, page_t *, bool *);
+static dev_driver_t vga_text_driver = {
+	.pimpl = NULL, // No need for pimpl (yet).
+	.dev = {
+		.maj = dev_maj_chardev,
+		.min = 0 // Only ever one VGA device.
+	},
+	.next_page_mapping = vga_text_next_page_mapping
+};
 
 static vga_text_size_t vga_text_size = {
 	.width = 80,
@@ -17,29 +26,22 @@ static vga_text_size_t vga_text_size = {
 static vga_text_entry_t *vga_text_buffer = (vga_text_entry_t *)0xb8000;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-static page_t *vga_text_next_page_mapping (dev_driver_t *this, page_t *last_page) {
+static page_t *vga_text_next_page_mapping (
+		dev_driver_t *this,
+		page_t *last_page,
+		bool *need_write
+) {
 	// VGA text buffer is 4000 bytes long, so it fits neatly in one page!
-
 	switch ((size_t)last_page) {
 		case (size_t)NULL:
+			// We need to write this page!
+			*need_write = true;
 			return (page_t *)vga_text_buffer;
 		default:
 			return NULL;
 	}
 }
 #pragma GCC diagnostic pop
-
-__attribute__((constructor))
-void vga_text_construct () {
-	vga_text_driver = (dev_driver_t){
-		.pimpl = NULL, // No need for pimpl (yet).
-		.dev = {
-			.maj = dev_maj_chardev,
-			.min = 0 // Only ever one VGA device.
-		},
-		.next_page_mapping = vga_text_next_page_mapping
-	};
-}
 
 void vga_text_init () {
 	size_t x, y;

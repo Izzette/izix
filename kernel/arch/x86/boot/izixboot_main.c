@@ -152,8 +152,13 @@ void kernel_main (
 
 	idt_load ();
 
-	paging_init ();
-	paging_load ();
+	paging_data_t paging_data_base;
+	paging_init (&paging_data_base);
+
+	e820_3x_map_physical (&paging_data_base);
+	dev_map_all (&paging_data_base);
+
+	paging_enable (&paging_data_base);
 
 	enable_int ();
 
