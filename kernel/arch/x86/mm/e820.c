@@ -1,5 +1,9 @@
 // kernel/arch/x86/mm/e820.c
 
+// For some reason, this is much bigger when compiled with optimizations, so we will
+// not optimize it.
+#pragma GCC optimize ("O0")
+
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
