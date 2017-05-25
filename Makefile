@@ -63,7 +63,10 @@ ifeq (x86,$(ARCH))
 objects_drivers_x86_pic_8259 := pic_8259.o
 objects_drivers_x86_pic_8259 := \
 	$(addprefix kernel/arch/$(ARCH)/drivers/pic_8259/,$(objects_drivers_x86_pic_8259))
-objects_drivers := $(objects_drivers) $(objects_drivers_x86_pic_8259)
+objects_drivers_x86_pit_8253 := pit_8253.o
+objects_drivers_x86_pit_8253 := \
+	$(addprefix kernel/arch/$(ARCH)/drivers/pit_8253/,$(objects_drivers_x86_pit_8253))
+objects_drivers := $(objects_drivers) $(objects_drivers_x86_pic_8259) $(objects_drivers_x86_pit_8253)
 endif
 
 objects_dev := dev.o

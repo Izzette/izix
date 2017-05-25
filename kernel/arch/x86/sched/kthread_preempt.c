@@ -5,7 +5,14 @@
 #include <kprint/kprint.h>
 #include <irq/irq.h>
 #include <sched/kthread.h>
+#include <sched/kthread_preempt.h>
 #include <sched/native_lock.h>
+#include <time/time.h>
+#include <pit_8253/pit_8253.h>
+
+// 10 ms should be a good choice for most systems.
+// TODO: Base off bogomips.
+#define KTHREAD_PREEMPT_INTERVAL time_from_millis (10)
 
 static volatile bool kthread_preempt_init = false;
 static native_lock_t
@@ -39,6 +46,8 @@ void kthread_preempt_enable () {
 
 		irq_add_post_hook (0, kthread_pit_825x_irq0_hook);
 
+		kthread_preempt_fast ();
+
 		kputs ("sched/kthread_preempt: Preemptive multitasking enabled.\n");
 
 		return;
@@ -54,6 +63,16 @@ void kthread_preempt_disable () {
 
 	// Just make sure it's locked.
 	native_lock_try_lock (kthread_preempt_lock);
+}
+
+// Use slowest available preemption rate.
+void kthread_preempt_slow () {
+	pit_8253_set_interval (PIT_8253_INTERVAL_MAX);
+}
+
+// Use normal preemption rate, which should hopefully be pretty fast.
+void kthread_preempt_fast () {
+	pit_8253_set_interval (KTHREAD_PREEMPT_INTERVAL);
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

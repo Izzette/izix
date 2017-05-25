@@ -5,6 +5,7 @@
 
 typedef enum dev_min_arch_enum {
 	dev_min_arch_pic_8259 = 0,
+	dev_min_arch_pit_8253 = 1
 } dev_min_arch_t;
 
 #endif

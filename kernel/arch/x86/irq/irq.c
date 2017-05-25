@@ -76,6 +76,9 @@ void irq_init () {
 	}
 
 	for (irq = 0; IRQ_NUMBER_OF_IRQ_LINES > irq; ++irq) {
+		// If there are no handlers, then there is no point in recieving those interupts.
+		pic_8259_mask (irq);
+
 		*irq_get_pre_hook_list  (irq) = new_linked_list_irq_hook ();
 		*irq_get_post_hook_list (irq) = new_linked_list_irq_hook ();
 	}
@@ -86,6 +89,7 @@ void irq_add_pre_hook (irq_t irq, irq_hook_t hook) {
 
 	irq_add_hook (irq_get_pre_hook_list (irq), hook);
 
+	// This will unmask the interupt now that there is a pre hook to run.
 	pic_8259_unmask (irq);
 }
 
@@ -94,6 +98,7 @@ void irq_add_post_hook (irq_t irq, irq_hook_t hook) {
 
 	irq_add_hook (irq_get_post_hook_list (irq), hook);
 
+	// This will unmask the interupt now that there is a post hook to run.
 	pic_8259_unmask (irq);
 }
 
@@ -102,11 +107,16 @@ void irq_handler (irq_t irq) {
 	volatile linked_list_irq_hook_t *pre_hook_list = irq_get_pre_hook_list (irq);
 	volatile linked_list_irq_hook_t *post_hook_list = irq_get_post_hook_list (irq);
 
-	irq_run_hooks (irq, pre_hook_list);
+	// If there is no start on pre or post hooks, then the lists is empty.
 
+	if (pre_hook_list->start)
+		irq_run_hooks (irq, pre_hook_list);
+
+	enable_int ();
 	pic_8259_send_eoi (irq);
 
-	irq_run_hooks (irq, post_hook_list);
+	if (post_hook_list->start)
+		irq_run_hooks (irq, post_hook_list);
 }
 
 // vim: set ts=4 sw=4 noet syn=c:

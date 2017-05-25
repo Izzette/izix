@@ -19,6 +19,7 @@
 #include <irq/irq_vectors.h>
 #include <isr/isr.h>
 #include <pic_8259/pic_8259.h>
+#include <pit_8253/pit_8253.h>
 
 #define KERNEL_START      ((void *)0x8000)
 #define KERNEL_MAX_LENGTH (127 * (size_t)512)
@@ -147,6 +148,8 @@ void kernel_main (
 
 	pic_8259_reinit ();
 	dev_add (pic_8259_get_device_driver ());
+
+	dev_add (pit_8253_get_device_driver ());
 
 	irq_init ();
 

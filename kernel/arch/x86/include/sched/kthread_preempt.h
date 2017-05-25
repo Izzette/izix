@@ -5,6 +5,8 @@
 
 void kthread_preempt_enable ();
 void kthread_preempt_disable ();
+void kthread_preempt_slow ();
+void kthread_preempt_fast ();
 
 #endif
 

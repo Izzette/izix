@@ -14,4 +14,5 @@ kernel/arch/x86/boot/izixboot_main.o: \
 		kernel/arch/x86/include/int/idt.h \
 		kernel/arch/x86/include/irq/irq_vectors.h \
 		kernel/arch/x86/include/isr/isr.h \
-		kernel/arch/x86/include/pic_8259/pic_8259.h
+		kernel/arch/x86/include/pic_8259/pic_8259.h \
+		kernel/arch/x86/include/pit_8253/pit_8253.h

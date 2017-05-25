@@ -318,12 +318,24 @@ static void kthread_background_task_idle () {
 	kthread_lock_task ();
 
 	for (;;) {
-		// Then just halt, and block until needed again.
-		halt ();
+		// Set low preemption rate.
+		kthread_preempt_slow ();
 
-		// Block if there are any new kthreads active.
-		if (kthreads_active->start)
+		for (;;) {
+			// Then just halt, until needed again.
+			while (!kthreads_active->start)
+				halt ();
+
+			// Return to normal preemption rate.
+			kthread_preempt_fast ();
+
+			// Block if there are any new kthreads active.
 			kthread_block ();
+
+			// Set low preemption rate again.
+			if (!kthreads_active->start)
+				break;
+		}
 	}
 }
 
