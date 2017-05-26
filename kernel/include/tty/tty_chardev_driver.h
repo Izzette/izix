@@ -73,7 +73,6 @@ static inline void tty_chardev_wrap_console (tty_chardev_driver_t *driver) {
 	tty_chardev_wrap_console_use_size (driver, size);
 }
 
-__attribute__((optimize("O3")))
 static inline mutex_t *tty_chardev_driver_get_mutex (volatile tty_chardev_driver_t *driver) {
 	return &driver->mutex_base;
 }

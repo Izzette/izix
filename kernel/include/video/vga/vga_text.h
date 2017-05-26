@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <attributes.h>
+
 #include <dev/dev_driver.h>
 
 /* Hardware text mode color constants. */
@@ -36,12 +38,12 @@ typedef struct vga_text_size_struct {
 	size_t height;
 } vga_text_size_t;
 
-typedef struct __attribute__((packed)) vga_text_color_struct {
+typedef struct PACKED vga_text_color_struct {
 	uint8_t fg : 4;
 	uint8_t bg : 4;
 } vga_text_color_t;
 
-typedef struct __attribute__((packed)) vga_text_entry_struct {
+typedef struct PACKED vga_text_entry_struct {
 	char c;
 	vga_text_color_t color;
 } vga_text_entry_t;

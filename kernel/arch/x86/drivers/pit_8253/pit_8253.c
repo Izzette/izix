@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <attributes.h>
+
 #include <asm/io.h>
 #include <dev/dev_types.h>
 #include <mm/page.h>
@@ -60,7 +62,7 @@ typedef enum pit_8253_channel_enum {
 // The PIT 8254 has a read back mode here, it will not be supported.
 } pit_8253_channel_t;
 
-typedef struct __attribute__((packed)) pit_8253_mode_struct {
+typedef struct PACKED pit_8253_mode_struct {
 	pit_8253_numeric_t   numeric   : 1;
 	pit_8253_operation_t operation : 3;
 	pit_8253_access_t    access    : 2;

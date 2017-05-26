@@ -1,5 +1,6 @@
 // kernel/dev/dev.c
 
+#include <attributes.h>
 #include <collections/bintree.h>
 
 #include <sched/mutex.h>
@@ -12,8 +13,7 @@
 #include <mm/page.h>
 #include <mm/paging.h>
 
-// Many of these routines are unessesarily large, using __attribute__((optimize("Os")))
-// to reduce bloat.
+// Many of these routines are unessesarily large, using SMALL to reduce bloat.
 
 TPL_BINTREE(min, dev_driver_t *)
 TPL_BINTREE(maj, bintree_min_fields_t)
@@ -46,7 +46,7 @@ static bintree_min_node_t *dev_get (dev_t dev, bintree_maj_node_t **maj_node_ptr
 	return min_node;
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static bintree_maj_node_t *dev_maj_add (dev_maj_t maj) {
 	bintree_maj_node_t *maj_node = malloc (sizeof(bintree_maj_node_t));
 	if (!maj_node) {
@@ -66,13 +66,13 @@ static bintree_maj_node_t *dev_maj_add (dev_maj_t maj) {
 	return maj_node;
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static void dev_maj_remove (bintree_maj_node_t *maj_node) {
 	dev_maj_tree->remove (dev_maj_tree, maj_node);
 	free (maj_node);
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static bintree_min_node_t *dev_min_add (bintree_min_t *min_tree, dev_driver_t *driver) {
 	bintree_min_node_t *min_node = malloc (sizeof(bintree_min_node_t));
 	if (!min_node) {
@@ -91,19 +91,19 @@ static bintree_min_node_t *dev_min_add (bintree_min_t *min_tree, dev_driver_t *d
 	return min_node;
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static void dev_min_remove (bintree_min_t *min_tree, bintree_min_node_t *min_node) {
 	min_tree->remove (min_tree, min_node);
 	free (min_node);
 }
 
-__attribute__((constructor))
+CONSTRUCTOR
 void dev_construct () {
 	dev_mutex_base = new_mutex ();
 	dev_maj_tree_base = new_bintree_maj ();
 }
 
-__attribute__((optimize("Os")))
+SMALL
 void dev_add (dev_driver_t *dev_driver) {
 	mutex_lock (dev_mutex);
 
@@ -127,7 +127,7 @@ void dev_add (dev_driver_t *dev_driver) {
 	mutex_release (dev_mutex);
 }
 
-__attribute__((optimize("Os")))
+SMALL
 void dev_remove (dev_t dev) {
 	mutex_lock (dev_mutex);
 
@@ -160,7 +160,7 @@ void dev_remove (dev_t dev) {
 	mutex_release (dev_mutex);
 }
 
-__attribute__((optimize("Os")))
+SMALL
 void dev_map (dev_t dev, paging_data_t *paging_data) {
 	mutex_lock (dev_mutex);
 
@@ -207,7 +207,7 @@ void dev_map (dev_t dev, paging_data_t *paging_data) {
 	mutex_release (dev_mutex);
 }
 
-__attribute__((optimize("Os")))
+SMALL
 void dev_map_all (paging_data_t *paging_data) {
 	bintree_maj_iterator_t
 		maj_iterator_base,

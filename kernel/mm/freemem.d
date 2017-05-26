@@ -1,4 +1,5 @@
 kernel/mm/freemem.o: \
+		libk/include/attributes.h \
 		libk/include/collections/bintree.h \
 		libk/include/collections/sparse_collection.h \
 		kernel/include/mm/freemem.h \

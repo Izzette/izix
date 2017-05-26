@@ -1,5 +1,6 @@
 // kernel/sched/kthread.c
 
+#include <attributes.h>
 #include <collections/linked_list.h>
 #include <collections/bintree.h>
 
@@ -12,7 +13,7 @@
 #include <sched/kthread_task.h>
 #include <sched/kthread_preempt.h>
 
-// We've added a lot of __attribute__((optimize("O3"))) here because it's very important
+// We've added a lot of optimizations here because it's very important
 // for preemptive multitasking that task switches themselves be very very fast.
 
 #define KTHREAD_MAIN_KPID 2
@@ -59,7 +60,7 @@ static kthread_t new_kthread (
 	return kthread;
 }
 
-typedef struct __attribute__((packed)) zero_width_struct {
+typedef struct PACKED zero_width_struct {
 } zero_width_t;
 
 static const zero_width_t zero_wide;
@@ -89,19 +90,19 @@ volatile linked_list_kthread_node_t *volatile kthread_running_node = NULL;
 volatile kpid_t kthread_destroy_task_kpid = -1;
 volatile kpid_t kthread_idle_task_kpid = -1;
 
-__attribute__((optimize("O3")))
+FAST HOT
 static volatile kthread_t *kthread_get_running_thread () {
 	return &kthread_running_node->data;
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 static volatile kthread_task_t *kthread_get_running_task () {
 	volatile kthread_t *kthread_running_thread = kthread_get_running_thread ();
 
 	return &kthread_running_thread->task;
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 static volatile kthread_lock_t *kthread_get_running_lock () {
 	volatile kthread_t *kthread_running_thread = kthread_get_running_thread ();
 
@@ -246,7 +247,7 @@ static void kthread_destroy_thread (linked_list_kthread_node_t *kthread_node) {
 }
 
 // Task must already be locked!
-__attribute__((optimize("O3")))
+FAST HOT
 static void kthread_next_task (volatile kthread_task_t *this_task) {
 	volatile linked_list_kthread_node_t *next_kthread_node =
 		kthreads_active->pop ((linked_list_kthread_t *)kthreads_active);
@@ -357,6 +358,7 @@ static void kthread_background_task_destroy () {
 	}
 }
 
+COLD
 void kthread_init (freemem_region_t main_stack_region) {
 	*kthreads_active = new_linked_list_kthread ();
 	*kthreads_destroy = new_linked_list_kthread ();
@@ -398,7 +400,7 @@ void kthread_init (freemem_region_t main_stack_region) {
 	kputs ("sched/kthread: Successfully initialized kthreads.\n");
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 bool kthread_is_init () {
 	return kthread_init_record;
 }
@@ -454,7 +456,7 @@ void kthread_end_task () {
 		kthread_next_task (ignored_task);
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 void kthread_yield () {
 	// Lock must be held through switch or else we could end up in kthreads active twice.
 	kthread_lock_task ();
@@ -468,7 +470,6 @@ void kthread_yield () {
 	kthread_unlock_task ();
 }
 
-__attribute__((optimize("O3")))
 bool kthread_wake (kpid_t kpid) {
 	// Lock atleast until removal from blocking tree.
 	kthread_lock_task ();
@@ -507,7 +508,7 @@ void kthread_block () {
 	kthread_unlock_task ();
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 bool kthread_lock_task () {
 	// Can in all likely-hood consider a call to lock task the first lock so long as
 	// kthreads aren't initialized.
@@ -522,7 +523,7 @@ bool kthread_lock_task () {
 	return first_lock;
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 void kthread_unlock_task () {
 	if (!kthread_is_init ())
 		return;
@@ -538,7 +539,7 @@ void kthread_unlock_task () {
 	running_lock->depth -= 1;
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 kpid_t kthread_get_running_kpid () {
 	volatile kthread_t *running_thread = kthread_get_running_thread ();
 

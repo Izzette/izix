@@ -1,9 +1,11 @@
 // kernel/arch/x86/boot/null_handler.c
 
+#include <attributes.h>
+
 #include <int/idt.h>
 
 // Cause #DF on jump/call to NULL.
-__attribute__((constructor))
+CONSTRUCTOR
 void null_handler_construct () {
 	asm volatile (
 		"		jmp		.Lcreate_null_call_handler_copy;\n"

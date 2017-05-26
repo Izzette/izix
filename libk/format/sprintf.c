@@ -5,13 +5,14 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#include <attributes.h>
 #include <string.h>
 #include <format.h>
 
 // Very minimal sprintf functions.
 
 // These routines account for a very large quantity of code in this kernel, thus we've
-// added __attribute__((optimize("Os")))
+// added SMALL
 
 typedef enum printf_type_enum {
 	PRINTF_TYPE_PERCENT,  // '%'
@@ -33,7 +34,7 @@ typedef enum printf_length_enum {
 	PRINTF_LEN_PTRDIFF     // "t"
 } printf_length_t;
 
-typedef struct __attribute__((packed)) printf_flags_struct {
+typedef struct PACKED printf_flags_struct {
 	uint8_t left_align     : 1;  // '-'
 	uint8_t sign_positive  : 1;  // '+'
 	uint8_t space_positive : 1;  // ' '
@@ -60,7 +61,7 @@ static printf_placeholder_t printf_placeholder_prototype = {
 };
 
 // Return number of characters in number until invalid character.
-__attribute__((optimize("Os")))
+SMALL
 static inline size_t printf_get_num (const char *str, unsigned int *num_ptr) {
 	const char *cur = str;
 
@@ -142,7 +143,7 @@ static inline size_t maybe_sign (
 
 // Returns length of placeholder, including the first '%'.
 // Returns zero if placeholder is invalid.
-__attribute__((optimize("Os")))
+SMALL
 static inline size_t parse_placeholder (
 		const char *format,  // Points to first '%' character.
 		printf_placeholder_t *placeholder_ptr
@@ -249,7 +250,7 @@ PARSE_PLACEHOLDER_WIDTH:
 	return cur - format;
 }
 
-__attribute__((optimize("Os")))
+SMALL
 int vsprintf (char *str, const char *format, va_list ap) {
 	char *cur = str;
 

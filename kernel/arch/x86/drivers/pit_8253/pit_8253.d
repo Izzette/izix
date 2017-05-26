@@ -1,4 +1,5 @@
 kernel/arch/x86/drivers/pit_8253/pit_8253.o: \
+		libk/include/attributes.h \
 		kernel/include/dev/dev_types.h \
 		kernel/include/time/time.h \
 		kernel/arch/x86/include/asm/io.h \

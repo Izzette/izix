@@ -5,6 +5,7 @@
 
 #include <stdbool.h>
 
+#include <attributes.h>
 #include <collections/linked_list.h>
 
 #include <sched/native_lock.h>
@@ -34,14 +35,17 @@ static inline mutex_t new_mutex () {
 }
 #pragma GCC diagnostic pop
 
+FAST
 static inline native_lock_t *mutex_get_native_lock (mutex_t *mutex) {
 	return &mutex->native_lock_base;
 }
 
+FAST
 static inline volatile mutex_kpid_list_t *mutex_get_waiting_kpids (mutex_t *mutex) {
 	return &mutex->waiting_kpids_base;
 }
 
+FAST
 static inline bool mutex_try_lock (mutex_t *mutex) {
 	if (!kthread_is_init ())
 		return true;
@@ -49,7 +53,9 @@ static inline bool mutex_try_lock (mutex_t *mutex) {
 	return native_lock_try_lock (mutex_get_native_lock (mutex));
 }
 
+FASTCALL
 void mutex_lock (mutex_t *);
+FASTCALL
 void mutex_release (mutex_t *);
 
 #endif

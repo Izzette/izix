@@ -1,4 +1,5 @@
 kernel/arch/x86/mm/e820.o: \
+		libk/include/attributes.h \
 		libk/include/string.h \
 		kernel/include/kprint/kprint.h \
 		kernel/include/kpanic/kpanic.h \

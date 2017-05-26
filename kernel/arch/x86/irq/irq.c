@@ -1,5 +1,6 @@
 // kernel/arch/x86/irq/irq.c
 
+#include <attributes.h>
 #include <collections/linked_list.h>
 
 #include <asm/toggle_int.h>
@@ -17,12 +18,16 @@ TPL_LINKED_LIST(irq_hook, irq_hook_t)
 static volatile linked_list_irq_hook_t *irq_pre_hooks;
 static volatile linked_list_irq_hook_t *irq_post_hooks;
 
-__attribute__((optimize("O3")))
+FASTCALL
+static volatile linked_list_irq_hook_t *irq_get_pre_hook_list (irq_t);
+FASTCALL FAST HOT
 static volatile linked_list_irq_hook_t *irq_get_pre_hook_list (irq_t irq) {
 	return &irq_pre_hooks[irq];
 }
 
-__attribute__((optimize("O3")))
+FASTCALL
+static volatile linked_list_irq_hook_t *irq_get_post_hook_list (irq_t);
+FASTCALL FAST HOT
 static volatile linked_list_irq_hook_t *irq_get_post_hook_list (irq_t irq) {
 	return &irq_post_hooks[irq];
 }
@@ -45,7 +50,9 @@ static void irq_add_hook (
 		hook_node);
 }
 
-__attribute__((optimize("O3")))
+FASTCALL
+static void irq_run_hooks (irq_t, volatile linked_list_irq_hook_t *);
+FASTCALL FAST HOT
 static void irq_run_hooks (
 		irq_t irq,
 		volatile linked_list_irq_hook_t *hook_list
@@ -65,6 +72,7 @@ static void irq_run_hooks (
 	}
 }
 
+COLD
 void irq_init () {
 	irq_t irq;
 
@@ -102,7 +110,7 @@ void irq_add_post_hook (irq_t irq, irq_hook_t hook) {
 	pic_8259_unmask (irq);
 }
 
-__attribute__((optimize("O3")))
+FASTCALL FAST HOT
 void irq_handler (irq_t irq) {
 	volatile linked_list_irq_hook_t *pre_hook_list = irq_get_pre_hook_list (irq);
 	volatile linked_list_irq_hook_t *post_hook_list = irq_get_post_hook_list (irq);

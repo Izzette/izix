@@ -1,5 +1,7 @@
 // kernel/arch/x86/int/idt.c
 
+#include <attributes.h>
+
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <mm/malloc.h>
@@ -8,6 +10,7 @@
 
 static idt_register_t *idt_registry;
 
+COLD
 void idt_init () {
 	size_t i;
 	idt_entry_t *entries;
@@ -59,6 +62,7 @@ void idt_set_isr (interupt_vector_t vector, void (*isr) ()) {
 	logical_registry.base[vector] = idt_entry_encode (logical_entry);
 }
 
+COLD
 void idt_load () {
 	asm volatile (
 		"		lidt		(%0);\n"

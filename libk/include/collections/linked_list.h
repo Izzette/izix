@@ -6,8 +6,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct __attribute__((packed)) linked_list_zero_width_struct {
-} __attribute__((__may_alias__)) linked_list_zero_width_t;
+#include <attributes.h>
+
+typedef struct PACKED linked_list_zero_width_struct {
+} MAY_ALIAS linked_list_zero_width_t;
 
 typedef struct linked_list_node_struct linked_list_node_t;
 typedef struct linked_list_node_struct {
@@ -28,19 +30,27 @@ static inline linked_list_node_t new_linked_list_node () {
 typedef struct linked_list_iterator_struct linked_list_iterator_t;
 typedef struct linked_list_iterator_struct {
 	linked_list_node_t *node;
+	FASTCALL
 	linked_list_node_t *(*cur) (linked_list_iterator_t *);
+	FASTCALL
 	linked_list_node_t *(*next) (linked_list_iterator_t *);
+	FASTCALL
 	linked_list_node_t *(*prev) (linked_list_iterator_t *);
+	FASTCALL
 	void (*reset) (linked_list_iterator_t *);
 } linked_list_iterator_t;
 
+FASTCALL
 linked_list_node_t *linked_list_iterator_cur (linked_list_iterator_t *);
+FASTCALL
 linked_list_node_t *linked_list_iterator_next (linked_list_iterator_t *);
+FASTCALL
 linked_list_node_t *linked_list_iterator_prev (linked_list_iterator_t *);
+FASTCALL
 void linked_list_iterator_reset (linked_list_iterator_t *);
 
 // The iterator functions are so simple, it's important that they are fast.
-__attribute__((optimize("O3")))
+FAST
 static inline linked_list_iterator_t new_linked_list_iterator (
 		linked_list_node_t *node
 ) {
@@ -59,31 +69,47 @@ typedef struct linked_list_struct linked_list_t;
 typedef struct linked_list_struct {
 	linked_list_node_t *start;
 	linked_list_node_t *end;
+	FASTCALL
 	size_t (*count) (linked_list_t *);
+	FASTCALL
 	linked_list_node_t *(*peek) (linked_list_t *);
+	FASTCALL
 	linked_list_node_t *(*peekEnd) (linked_list_t *);
 	linked_list_node_t *(*get) (linked_list_t *, size_t);
 	void (*push) (linked_list_t *, linked_list_node_t *);
+	FASTCALL
 	void (*append) (linked_list_t *, linked_list_node_t *);
 	bool (*insert) (linked_list_t *, size_t, linked_list_node_t *);
+	FASTCALL
 	linked_list_node_t *(*pop) (linked_list_t *);
+	FASTCALL
 	linked_list_node_t *(*popEnd) (linked_list_t *);
 	linked_list_node_t *(*remove) (linked_list_t *, size_t);
+	FASTCALL
 	void (*removeNode) (linked_list_t *, linked_list_node_t *);
+	FASTCALL
 	linked_list_iterator_t (*new_iterator) (linked_list_t *);
 } linked_list_t;
 
+FASTCALL
 size_t linked_list_count (linked_list_t *);
+FASTCALL
 linked_list_node_t *linked_list_peek (linked_list_t *);
+FASTCALL
 linked_list_node_t *linked_list_peekEnd (linked_list_t *);
 linked_list_node_t *linked_list_get (linked_list_t *, size_t);
 void linked_list_push (linked_list_t *, linked_list_node_t *);
+FASTCALL
 void linked_list_append (linked_list_t *, linked_list_node_t *);
 bool linked_list_insert (linked_list_t *, size_t, linked_list_node_t *);
+FASTCALL
 linked_list_node_t *linked_list_pop (linked_list_t *);
+FASTCALL
 linked_list_node_t *linked_list_popEnd (linked_list_t *);
 linked_list_node_t *linked_list_remove (linked_list_t *, size_t);
+FASTCALL
 void linked_list_removeNode (linked_list_t *, linked_list_node_t *);
+FASTCALL
 linked_list_iterator_t new_linked_list_iterator_from_list (linked_list_t *);
 
 static inline linked_list_t new_linked_list () {
@@ -127,11 +153,15 @@ static inline linked_list_##name##_node_t new_linked_list_##name##_node (type da
 typedef struct linked_list_##name##_iterator_struct linked_list_##name##_iterator_t; \
 typedef struct linked_list_##name##_iterator_struct { \
 	linked_list_##name##_node_t *node; \
+	FASTCALL \
 	linked_list_##name##_node_t *(*cur) (linked_list_##name##_iterator_t *); \
+	FASTCALL \
 	linked_list_##name##_node_t *(*next) (linked_list_##name##_iterator_t *); \
+	FASTCALL \
 	linked_list_##name##_node_t *(*prev) (linked_list_##name##_iterator_t *); \
+	FASTCALL \
 	void (*reset) (linked_list_##name##_iterator_t *); \
-} __attribute__((__may_alias__)) linked_list_##name##_iterator_t; \
+} MAY_ALIAS linked_list_##name##_iterator_t; \
 \
 static inline linked_list_##name##_iterator_t new_linked_list_##name##_iterator ( \
 		linked_list_##name##_node_t *node \
@@ -144,19 +174,27 @@ typedef struct linked_list_##name##_struct linked_list_##name##_t; \
 typedef struct linked_list_##name##_struct { \
 	linked_list_##name##_node_t *start; \
 	linked_list_##name##_node_t *end; \
+	FASTCALL \
 	size_t (*count) (linked_list_##name##_t *); \
+	FASTCALL \
 	linked_list_##name##_node_t *(*peek) (linked_list_##name##_t *); \
+	FASTCALL \
 	linked_list_##name##_node_t *(*peekEnd) (linked_list_##name##_t *); \
 	linked_list_##name##_node_t *(*get) (linked_list_##name##_t *, size_t); \
 	void (*push) (linked_list_##name##_t *, linked_list_##name##_node_t *); \
+	FASTCALL \
 	void (*append) (linked_list_##name##_t *, linked_list_##name##_node_t *); \
 	bool (*insert) (linked_list_##name##_t *, size_t, linked_list_##name##_node_t *); \
+	FASTCALL \
 	linked_list_##name##_node_t *(*pop) (linked_list_##name##_t *); \
+	FASTCALL \
 	linked_list_##name##_node_t *(*popEnd) (linked_list_##name##_t *); \
 	linked_list_##name##_node_t *(*remove) (linked_list_##name##_t *, size_t); \
+	FASTCALL \
 	void (*removeNode) (linked_list_##name##_t *, linked_list_##name##_node_t *); \
+	FASTCALL \
 	linked_list_##name##_iterator_t (*new_iterator) (linked_list_##name##_t *); \
-} __attribute__((__may_alias__)) linked_list_##name##_t; \
+} MAY_ALIAS linked_list_##name##_t; \
 \
 static inline linked_list_##name##_t new_linked_list_##name () { \
 	linked_list_t list = new_linked_list (); \

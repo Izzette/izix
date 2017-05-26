@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <attributes.h>
+
 #include <mm/gdt.h>
 
 #define IDT_OFFSET_LOW_OFFSET  000
@@ -59,7 +61,7 @@ typedef enum idt_type_enum {
 	IDT_I386_TRAP_GATE     = 0b1111,
 } idt_type_t;
 
-typedef struct __attribute__((packed)) idt_entry_struct {
+typedef struct PACKED idt_entry_struct {
 	uint16_t offset_low;
 	uint16_t selector;
 	uint8_t _rsv;
@@ -79,7 +81,7 @@ typedef struct idt_entry_logical_struct {
 	bool present;
 } idt_entry_logical_t;
 
-typedef struct __attribute__((packed)) idt_register_struct {
+typedef struct PACKED idt_register_struct {
 	uint16_t limit;
 	uint32_t base;
 } idt_register_t;

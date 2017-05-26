@@ -5,6 +5,8 @@
 
 #include <stdbool.h>
 
+#include <attributes.h>
+
 #include <mm/freemem.h>
 #include <mm/paging.h>
 #include <sched/spinlock.h>
@@ -17,7 +19,7 @@
 void kthread_init (freemem_region_t);
 bool kthread_is_init ();
 void kthread_end_task ()
-	__attribute__((noreturn));
+	NORETURN;
 void kthread_yield ();
 // Return is true if kpid was blocking, false otherwise (even if kpid is free).
 bool kthread_wake (kpid_t);

@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <attributes.h>
+
 #include <sched/mutex.h>
 #include <video/vga/vga_text.h>
 #include <video/vga/vga_cursor.h>
@@ -53,6 +55,7 @@ static tty_chardev_driver_t tty_vga_prototype = {
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
+COLD
 static bool tty_vga_init (tty_chardev_driver_t *this) {
 	this->pimpl = &tty_vga_privdata;
 	this->mutex_base = new_mutex ();
@@ -62,6 +65,7 @@ static bool tty_vga_init (tty_chardev_driver_t *this) {
 	return true;
 }
 
+COLD
 static bool tty_vga_release (tty_chardev_driver_t *this) {
 	// nop
 

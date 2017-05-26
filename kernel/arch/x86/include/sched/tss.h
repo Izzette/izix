@@ -5,12 +5,14 @@
 
 #include <stdint.h>
 
+#include <attributes.h>
 #include <string.h>
+
 #include <mm/segment.h>
 
 typedef struct tss_struct tss_t;
 
-typedef struct __attribute__((packed)) tss_struct {
+typedef struct PACKED tss_struct {
 	volatile uint16_t link;
 	uint16_t _rsv0;
 

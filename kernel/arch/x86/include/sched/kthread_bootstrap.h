@@ -3,8 +3,10 @@
 #ifndef IZIX_KTHREAD_BOOTSTRAP_H
 #define IZIX_KTHREAD_BOOTSTRAP_H 1
 
+#include <attributes.h>
+
 void kthread_bootstrap (void (*) ())
-	__attribute__((noreturn));
+	NORETURN;
 
 #endif
 

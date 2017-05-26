@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdarg.h>
 
+#include <attributes.h>
+
 char *strpadl (char *, char, size_t);
 char *strpadr (char *, char, size_t);
 
@@ -37,9 +39,9 @@ static inline char *itoa (int value, char *result, int base) {
 #endif
 
 int sprintf (char *, const char *, ...)
-	__attribute__ ((format (printf, 2, 3)));
+	FORMAT(printf, 2, 3);
 int vsprintf (char *, const char *, va_list)
-	__attribute__ ((format (printf, 2, 0)));
+	FORMAT(printf, 2, 0);
 
 #endif
 

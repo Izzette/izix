@@ -5,7 +5,9 @@
 
 #include <stddef.h>
 
-typedef struct __attribute__((packed)) bintree_zero_width_struct {
+#include <attributes.h>
+
+typedef struct PACKED bintree_zero_width_struct {
 } bintree_zero_width_t;
 
 typedef struct bintree_node_struct bintree_node_t;
@@ -38,7 +40,7 @@ typedef struct bintree_sub_struct {
 typedef struct bintree_fields_struct {
 	bintree_node_t *root;
 	unsigned char last_rm : 1;
-} __attribute__((__may_alias__)) bintree_fields_t;
+} MAY_ALIAS bintree_fields_t;
 
 typedef struct bintree_struct bintree_t;
 typedef struct bintree_struct {
@@ -110,7 +112,7 @@ typedef struct bintree_##name##_iterator_struct { \
 	bintree_##name##_node_t *(*next) (bintree_##name##_iterator_t *); \
 	bintree_##name##_node_t *(*prev) (bintree_##name##_iterator_t *); \
 	void (*reset) (bintree_##name##_iterator_t *); \
-} __attribute__((__may_alias__)) bintree_##name##_iterator_t; \
+} MAY_ALIAS bintree_##name##_iterator_t; \
 \
 static inline bintree_##name##_iterator_t new_bintree_##name##_iterator ( \
 		bintree_##name##_node_t *node \
@@ -128,7 +130,7 @@ typedef struct bintree_##name##_sub_struct { \
 	bintree_##name##_node_t *(*min) (bintree_##name##_sub_t *); \
 	bintree_##name##_node_t *(*max) (bintree_##name##_sub_t *); \
 	bintree_##name##_node_t *(*search) (bintree_##name##_sub_t *, size_t); \
-} __attribute__((__may_alias__)) bintree_##name##_sub_t; \
+} MAY_ALIAS bintree_##name##_sub_t; \
 \
 static inline bintree_##name##_sub_t new_bintree_##name##_sub (bintree_##name##_node_t *node) { \
 	bintree_sub_t generic_subtree = new_bintree_sub ((bintree_node_t *)node); \
@@ -139,7 +141,7 @@ static inline bintree_##name##_sub_t new_bintree_##name##_sub (bintree_##name##_
 typedef struct bintree_##name##_fields_struct { \
 	bintree_##name##_node_t *root; \
 	unsigned char last_rm : 1; \
-} __attribute__((__may_alias__)) bintree_##name##_fields_t; \
+} MAY_ALIAS bintree_##name##_fields_t; \
 \
 static inline bintree_##name##_fields_t new_bintree_##name##_fields () { \
 	bintree_fields_t generic_fields = new_bintree_fields (); \
@@ -158,7 +160,7 @@ typedef struct bintree_##name##_struct { \
 	void (*remove) (bintree_##name##_t *, bintree_##name##_node_t *); \
 	bintree_##name##_fields_t (*get_fields) (bintree_##name##_t *); \
 	bintree_##name##_iterator_t (*new_iterator) (bintree_##name##_t *); \
-} __attribute__((__may_alias__)) bintree_##name##_t; \
+} MAY_ALIAS bintree_##name##_t; \
 \
 static inline bintree_##name##_t new_bintree_##name () { \
 	bintree_t generic_tree = new_bintree (); \

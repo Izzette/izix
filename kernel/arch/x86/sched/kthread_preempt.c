@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#include <attributes.h>
+
 #include <kprint/kprint.h>
 #include <irq/irq.h>
 #include <sched/kthread.h>
@@ -20,7 +22,9 @@ static native_lock_t
 	*kthread_preempt_lock = &kthread_preempt_lock_base;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-__attribute__((optimize("O3"))) // Interupt handlers must be very fast!
+FASTCALL
+static void kthread_pit_825x_irq0_hook (irq_t);
+FASTCALL FAST HOT
 static void kthread_pit_825x_irq0_hook (irq_t irq) {
 	if (native_lock_is_locked (kthread_preempt_lock))
 		return;
@@ -38,6 +42,7 @@ static void kthread_pit_825x_irq0_hook (irq_t irq) {
 }
 #pragma GCC diagnostic pop
 
+COLD
 void kthread_preempt_enable () {
 	if (!kthread_preempt_init) {
 		kthread_preempt_init = true;
@@ -57,6 +62,7 @@ void kthread_preempt_enable () {
 		native_lock_release (kthread_preempt_lock);
 }
 
+COLD
 void kthread_preempt_disable () {
 	if (!kthread_preempt_init)
 		return;

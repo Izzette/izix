@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <attributes.h>
+
 #include <mm/page.h>
 
 #define PAGE_ALIGN_UPPER_WIDTH 024
@@ -27,7 +29,7 @@ typedef struct page_table_entry_logical_struct {
 	page_t *physical_page_offset;
 } page_table_entry_logical_t;
 
-typedef struct __attribute__((packed)) page_table_entry_struct {
+typedef struct PACKED page_table_entry_struct {
 	unsigned char          present              : 1;
 	unsigned char          writable             : 1;
 	unsigned char          user                 : 1;
@@ -53,7 +55,7 @@ typedef struct page_directory_entry_logical_struct {
 	page_table_entry_t *page_table_base;
 } page_directory_entry_logical_t;
 
-typedef struct __attribute__((packed)) page_directory_entry_struct {
+typedef struct PACKED page_directory_entry_struct {
 	unsigned char          present         : 1;
 	unsigned char          writable        : 1;
 	unsigned char          user            : 1;

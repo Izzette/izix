@@ -3,6 +3,8 @@
 #ifndef IZIX_INT_SELECTOR_EC_H
 #define IZIX_INT_SELECTOR_EC_H 1
 
+#include <attributes.h>
+
 #include <mm/gdt.h>
 
 typedef enum int_selector_table_enum {
@@ -12,7 +14,7 @@ typedef enum int_selector_table_enum {
 	IDT_SELECTOR_TABLE_IDT2 = 0b11
 } int_selector_table_t;
 
-typedef struct __attribute__((packed)) int_selector_ec_struct {
+typedef struct PACKED int_selector_ec_struct {
 	unsigned char external : 1;
 	int_selector_table_t table : 2;
 	segment_selector_t selector : 13;

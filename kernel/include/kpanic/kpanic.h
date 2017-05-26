@@ -3,8 +3,10 @@
 #ifndef IZIX_KPANIC_H
 #define IZIX_KPANIC_H 1
 
+#include <attributes.h>
+
 void kpanic ()
-	__attribute__((noreturn));
+	NORETURN;
 
 #endif
 

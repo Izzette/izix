@@ -1,5 +1,6 @@
 // kernel/sched/mutex.c
 
+#include <attributes.h>
 #include <collections/linked_list.h>
 
 #include <mm/malloc.h>
@@ -9,6 +10,7 @@
 #include <sched/mutex.h>
 #include <sched/kthread.h>
 
+FASTCALL FAST HOT
 void mutex_lock (mutex_t *mutex) {
 	if (!kthread_is_init ())
 		return;
@@ -51,6 +53,7 @@ void mutex_lock (mutex_t *mutex) {
 	}
 }
 
+FASTCALL FAST HOT
 void mutex_release (mutex_t *mutex) {
 	if (!kthread_is_init ())
 		return;

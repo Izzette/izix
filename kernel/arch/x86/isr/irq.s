@@ -13,8 +13,8 @@ isr_irq\irq_num:
 
 	save_state
 
-	xor	%ah,		%ah
-	mov	$\irq_num,	%al
+	xor	%ecx,		%ecx
+	mov	$\irq_num,	%cl
 
 	jmp isr_irq_handle
 	.size	isr_irq\irq_num, .-isr_irq0
@@ -44,9 +44,7 @@ isr_irq_head 15
 	.type	isr_irq_handle,	@function
 // IRQ number in %al
 isr_irq_handle:
-	push	%ax
 	call	irq_handler
-	add	$2,		%esp
 
 	restore_state
 

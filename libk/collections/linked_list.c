@@ -1,5 +1,6 @@
 // libk/collections/linked_list.c
 
+#include <attributes.h>
 #include <collections/linked_list.h>
 
 static void linked_list_insert_between (
@@ -9,29 +10,33 @@ static void linked_list_insert_between (
 );
 static linked_list_node_t *linked_list_get_from (linked_list_node_t *, size_t);
 
-static inline linked_list_node_t *linked_list_next (linked_list_node_t *node) {
+FAST HOT
+static linked_list_node_t *linked_list_next (linked_list_node_t *node) {
 	return node->next;
 }
 
-static inline linked_list_node_t *linked_list_prev (linked_list_node_t *node) {
+FAST HOT
+static linked_list_node_t *linked_list_prev (linked_list_node_t *node) {
 	return node->prev;
 }
 
-static inline void linked_list_insert_after (
+FAST HOT
+static void linked_list_insert_after (
 		linked_list_node_t *before,
 		linked_list_node_t *node
 ) {
 	linked_list_insert_between (before, node, linked_list_next (before));
 }
 
-static inline void linked_list_insert_before (
+static void linked_list_insert_before (
 		linked_list_node_t *after,
 		linked_list_node_t *node
 ) {
 	linked_list_insert_between (linked_list_prev (after), node, after);
 }
 
-static inline void linked_list_detach (
+FAST HOT
+static void linked_list_detach (
 		linked_list_node_t *prev,
 		linked_list_node_t *next
 ) {
@@ -41,7 +46,8 @@ static inline void linked_list_detach (
 		next->prev = NULL;
 }
 
-static inline void linked_list_attach (
+FAST HOT
+static void linked_list_attach (
 		linked_list_node_t *prev,
 		linked_list_node_t *next
 ) {
@@ -51,6 +57,7 @@ static inline void linked_list_attach (
 		next->prev = prev;
 }
 
+FAST HOT
 static void linked_list_insert_between (
 		linked_list_node_t *before,
 		linked_list_node_t *between,
@@ -83,6 +90,7 @@ static linked_list_node_t *linked_list_insert_at (
 	return start;
 }
 
+FAST HOT
 static void linked_list_remove_node (linked_list_node_t *node) {
 	linked_list_node_t *prev, *next;
 
@@ -118,13 +126,13 @@ static linked_list_node_t *linked_list_get_from (linked_list_node_t *start, size
 }
 
 // The iterator functions are so simple, it's important that they are fast.
-__attribute__((optimize("O3")))
+FASTCALL FAST HOT
 linked_list_node_t *linked_list_iterator_cur (linked_list_iterator_t *this) {
 	return this->node;
 }
 
 
-__attribute__((optimize("O3")))
+FASTCALL FAST HOT
 linked_list_node_t *linked_list_iterator_next (linked_list_iterator_t *this) {
 	if (!this->node)
 		return NULL;
@@ -137,7 +145,7 @@ linked_list_node_t *linked_list_iterator_next (linked_list_iterator_t *this) {
 	return this->node;
 }
 
-__attribute__((optimize("O3")))
+FASTCALL
 linked_list_node_t *linked_list_iterator_prev (linked_list_iterator_t *this) {
 	if (!this->node)
 		return NULL;
@@ -150,11 +158,12 @@ linked_list_node_t *linked_list_iterator_prev (linked_list_iterator_t *this) {
 	return this->node;
 }
 
-__attribute__((optimize("O3")))
+FASTCALL
 void linked_list_iterator_reset (linked_list_iterator_t *this) {
 	while (linked_list_iterator_prev (this));
 }
 
+FASTCALL
 size_t linked_list_count (linked_list_t *this) {
 	if (!this->start)
 		return 0;
@@ -162,10 +171,12 @@ size_t linked_list_count (linked_list_t *this) {
 	return linked_list_count_from (this->start);
 }
 
+FASTCALL
 linked_list_node_t *linked_list_peek (linked_list_t *this) {
 	return this->start;
 }
 
+FASTCALL
 linked_list_node_t *linked_list_peekEnd (linked_list_t *this) {
 	return this->end;
 }
@@ -178,6 +189,7 @@ void linked_list_push (linked_list_t *this, linked_list_node_t *node) {
 	this->insert (this, 0, node);
 }
 
+FASTCALL FAST HOT
 void linked_list_append (linked_list_t *this, linked_list_node_t *node) {
 	if (!this->start) {
 		this->start = node;
@@ -203,6 +215,7 @@ bool linked_list_insert (linked_list_t *this, size_t i, linked_list_node_t *node
 	return true;
 }
 
+FASTCALL FAST HOT
 linked_list_node_t *linked_list_pop (linked_list_t *this) {
 	if (!this->start)
 		return NULL;
@@ -214,6 +227,7 @@ linked_list_node_t *linked_list_pop (linked_list_t *this) {
 	return node;
 }
 
+FASTCALL
 linked_list_node_t *linked_list_popEnd (linked_list_t *this) {
 	if (!this->end)
 		return NULL;
@@ -235,6 +249,7 @@ linked_list_node_t *linked_list_remove (linked_list_t *this, size_t i) {
 	return node;
 }
 
+FASTCALL FAST HOT
 void linked_list_removeNode (linked_list_t *this, linked_list_node_t *node) {
 	if (this->start == node)
 		this->start = node->next;
@@ -244,7 +259,7 @@ void linked_list_removeNode (linked_list_t *this, linked_list_node_t *node) {
 	linked_list_remove_node (node);
 }
 
-__attribute__((optimize("O3")))
+FASTCALL FAST HOT
 linked_list_iterator_t new_linked_list_iterator_from_list (linked_list_t *this) {
 	return new_linked_list_iterator (this->start);
 }

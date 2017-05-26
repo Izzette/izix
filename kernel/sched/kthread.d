@@ -1,4 +1,5 @@
 kernel/sched/kthread.o: \
+		libk/include/attributes.h \
 		libk/include/collections/linked_list.h \
 		libk/include/collections/bintree.h \
 		kernel/include/mm/malloc.h \

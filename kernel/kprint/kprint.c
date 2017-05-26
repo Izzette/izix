@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 
+#include <attributes.h>
 #include <string.h>
 #include <format.h>
 
@@ -18,10 +19,12 @@ static char kprint_buffer[1024];
 
 static volatile tty_chardev_driver_t *kprint_tty_chardev_driver;
 
-void kprint_init () {
+CONSTRUCTOR
+void kprint_construct () {
 	kprint_mutex_base = new_mutex ();
 }
 
+COLD
 void set_kprint_tty_chardev_driver (volatile tty_chardev_driver_t *driver) {
 	// Wrap assignment and retrival of tty_chardev_driver.
 	mutex_lock (kprint_mutex);

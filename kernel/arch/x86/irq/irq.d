@@ -1,4 +1,5 @@
 kernel/arch/x86/irq/irq.o: \
+		libk/include/attributes.h \
 		libk/include/collections/linked_list.h \
 		kernel/include/mm/malloc.h \
 		kernel/include/kprint/kprint.h \

@@ -1,4 +1,5 @@
 kernel/dev/dev.o: \
+		libk/include/attributes.h \
 		libk/include/collections/bintree.h \
 		kernel/include/mm/malloc.h \
 		kernel/include/kprint/kprint.h \

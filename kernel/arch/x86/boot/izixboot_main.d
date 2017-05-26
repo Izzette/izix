@@ -1,4 +1,5 @@
 kernel/arch/x86/boot/izixboot_main.o: \
+		libk/include/attributes.h \
 		kernel/include/dev/dev.h \
 		kernel/include/tty/tty_chardev_driver.h \
 		kernel/include/tty/tty_vga_text.h \

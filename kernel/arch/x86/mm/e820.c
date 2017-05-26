@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <attributes.h>
 #include <string.h>
 
 #include <kprint/kprint.h>
@@ -32,6 +33,7 @@ static size_t e820_entry_count;
 
 static page_attrs_t e820_type_attrs[5];
 
+COLD
 static char *e820_get_type_str (e820_type_t type) {
 	switch (type) {
 		case e820_usable:
@@ -50,11 +52,13 @@ static char *e820_get_type_str (e820_type_t type) {
 	}
 }
 
+COLD
 static void e820_header_print () {
 	kputs ("mm/e820: BIOS-provided physical RAM map:\n");
 }
 
 // Get bounded length of memory region, or zero if it is out of bounds.
+COLD
 static size_t e820_get_bounded_length (uint64_t length, uint64_t base) {
 	if (UINTPTR_MAX < base)
 		return 0;
@@ -71,6 +75,7 @@ static size_t e820_get_bounded_length (uint64_t length, uint64_t base) {
 	return length;
 }
 
+COLD
 static void e820_add_freemem (uint64_t length_u64, uint64_t base_u64) {
 	const size_t length = e820_get_bounded_length (length_u64, base_u64);
 	if (!length)
@@ -88,6 +93,7 @@ static void e820_add_freemem (uint64_t length_u64, uint64_t base_u64) {
 	}
 }
 
+COLD
 static void e820_map_page (
 		uint64_t length_u64,
 		uint64_t base_u64,
@@ -134,7 +140,7 @@ static void e820_map_page (
 	}
 }
 
-__attribute__((constructor))
+CONSTRUCTOR
 void e820_construct () {
 	e820_type_attrs[e820_usable - 1]    = (page_attrs_t){
 		.present        = true,
@@ -200,13 +206,13 @@ typedef enum e820_3x_volatility_enum {
 	e820_3x_non_volatile = 0b1
 } e820_3x_volatility_t;
 
-typedef struct __attribute__((packed)) e820_3x_xattrs_struct {
+typedef struct PACKED e820_3x_xattrs_struct {
 	e820_3x_ignore_t     ignored     : 1;
 	e820_3x_volatility_t volatility  : 1;
 	uint32_t             _rsv0       : 30;
 } e820_3x_xattrs_t;
 
-typedef struct __attribute__((packed)) e820_entry_3x_struct {
+typedef struct PACKED e820_entry_3x_struct {
 	uint64_t         base;
 	uint64_t         length;
 #if 4 <= __SIZEOF_INT__ // In C99 6.7.2.2 enums are guaranteed to be the size of an int.
@@ -220,6 +226,7 @@ typedef struct __attribute__((packed)) e820_entry_3x_struct {
 
 static e820_entry_3x_t *e820_entries_3x;
 
+COLD
 static void e820_entry_3x_print (e820_entry_3x_t entry) {
 	if (!entry.length || e820_3x_ignore == entry.xattrs.ignored)
 		kputs ("mm/e820: ignored\n");
@@ -234,6 +241,7 @@ static void e820_entry_3x_print (e820_entry_3x_t entry) {
 		entry.length, entry.base, type, xattr);
 }
 
+COLD
 static void e820_entry_3x_add_freemem (e820_entry_3x_t entry) {
 	if (!entry.length ||
 			e820_usable != entry.type ||
@@ -243,6 +251,7 @@ static void e820_entry_3x_add_freemem (e820_entry_3x_t entry) {
 	e820_add_freemem (entry.length, entry.base);
 }
 
+COLD
 static void e820_entry_3x_map_page (e820_entry_3x_t entry, paging_data_t *paging_data) {
 	if (!entry.length || e820_3x_ignore == entry.xattrs.ignored)
 		return;
@@ -251,6 +260,7 @@ static void e820_entry_3x_map_page (e820_entry_3x_t entry, paging_data_t *paging
 	e820_map_page (entry.length, entry.base, entry.type, volatility, paging_data);
 }
 
+COLD
 void e820_3x_print () {
 	e820_header_print ();
 
@@ -259,17 +269,20 @@ void e820_3x_print () {
 		e820_entry_3x_print (e820_entries_3x[i]);
 }
 
+COLD
 void e820_3x_register (size_t entry_count, void *entries) {
 	e820_entry_count = entry_count;
 	e820_entries_3x = entries;
 }
 
+COLD
 void e820_3x_add_freemem () {
 	size_t i;
 	for (i = 0; e820_entry_count > i; ++i)
 		e820_entry_3x_add_freemem (e820_entries_3x[i]);
 }
 
+COLD
 void e820_3x_clone () {
 	const size_t entries_size = e820_entry_count * sizeof(e820_entry_3x_t);
 
@@ -284,6 +297,7 @@ void e820_3x_clone () {
 	e820_entries_3x = new_entries;
 }
 
+COLD
 void e820_3x_map_physical (paging_data_t *paging_data) {
 	size_t i;
 	for (i = 0; e820_entry_count > i; ++i)
@@ -302,6 +316,7 @@ typedef struct e820_entry_legacy_struct {
 
 static e820_entry_legacy_t *e820_entries_legacy;
 
+COLD
 static void e820_entry_legacy_print (e820_entry_legacy_t entry) {
 	if (!entry.length)
 		kputs ("mm/e820: ignored\n");
@@ -313,6 +328,7 @@ static void e820_entry_legacy_print (e820_entry_legacy_t entry) {
 		entry.length, entry.base, type);
 }
 
+COLD
 static void e820_entry_legacy_add_freemem (e820_entry_legacy_t entry) {
 	if (!entry.length ||
 			e820_usable != entry.type)
@@ -321,6 +337,7 @@ static void e820_entry_legacy_add_freemem (e820_entry_legacy_t entry) {
 	e820_add_freemem (entry.length, entry.base);
 }
 
+COLD
 static void e820_entry_legacy_map_page (e820_entry_legacy_t entry, paging_data_t *paging_data) {
 	if (!entry.length)
 		return;
@@ -328,6 +345,7 @@ static void e820_entry_legacy_map_page (e820_entry_legacy_t entry, paging_data_t
 	e820_map_page (entry.length, entry.base, entry.type, true, paging_data);
 }
 
+COLD
 void e820_legacy_print () {
 	e820_header_print ();
 
@@ -336,17 +354,20 @@ void e820_legacy_print () {
 		e820_entry_legacy_print (e820_entries_legacy[i]);
 }
 
+COLD
 void e820_legacy_register (size_t entry_count, void *entries) {
 	e820_entry_count = entry_count;
 	e820_entries_legacy = entries;
 }
 
+COLD
 void e820_legacy_add_freemem () {
 	size_t i;
 	for (i = 0; e820_entry_count > i; ++i)
 		e820_entry_legacy_add_freemem (e820_entries_legacy[i]);
 }
 
+COLD
 void e820_legacy_clone () {
 	const size_t entries_size = e820_entry_count * sizeof(e820_entry_legacy_t);
 
@@ -361,6 +382,7 @@ void e820_legacy_clone () {
 	e820_entries_legacy = new_entries;
 }
 
+COLD
 void e820_legacy_map_physical (paging_data_t *paging_data) {
 	size_t i;
 	for (i = 0; e820_entry_count > i; ++i)

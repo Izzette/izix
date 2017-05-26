@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include <attributes.h>
+
 #include <video/vga/vga_text.h>
 #include <video/vga/vga_cursor.h>
 #include <dev/dev_types.h>
@@ -43,6 +45,7 @@ static page_t *vga_text_next_page_mapping (
 }
 #pragma GCC diagnostic pop
 
+COLD
 void vga_text_init () {
 	size_t x, y;
 	vga_text_color_t color;
@@ -93,6 +96,5 @@ void vga_text_scoll_one_line () {
 dev_driver_t *vga_text_get_device_driver () {
 	return &vga_text_driver;
 }
-
 
 // vim: set ts=4 sw=4 noet syn=c:

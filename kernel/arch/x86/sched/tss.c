@@ -1,5 +1,7 @@
 // kernel/arch/x86/sched/tss.c
 
+#include <attributes.h>
+
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <sched/tss.h>
@@ -10,6 +12,7 @@
 static tss_t *tss_task_state_segment;
 static void *tss_esp;
 
+COLD
 void tss_init (void *esp) {
 	tss_esp = esp;
 
@@ -32,10 +35,12 @@ void tss_init (void *esp) {
 	*tss_task_state_segment = tss_encode (logical_tss);
 }
 
+COLD
 tss_t *tss_get () {
 	return tss_task_state_segment;
 }
 
+COLD
 void tss_load (segment_selector_t tss_selector) {
 	asm volatile (
 		"		ltr		%0;\n"

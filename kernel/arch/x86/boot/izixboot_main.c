@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <attributes.h>
+
 #include <dev/dev.h>
 #include <tty/tty_chardev_driver.h>
 #include <tty/tty_vga_text.h>
@@ -25,7 +27,7 @@
 #define KERNEL_MAX_LENGTH (127 * (size_t)512)
 #define KERNEL_MAX_END    (KERNEL_START + KERNEL_MAX_LENGTH)
 
-__attribute__((force_align_arg_pointer))
+COLD FORCE_ALIGN_ARG_POINTER
 void kernel_main (
 		uint32_t stack_start_u32,
 		uint32_t stack_length_u32,
@@ -84,7 +86,6 @@ void kernel_main (
 	tty_chardev_driver_vga_text->init (
 		(tty_chardev_driver_t *)tty_chardev_driver_vga_text);
 
-	kprint_init ();
 	set_kprint_tty_chardev_driver (tty_chardev_driver_vga_text);
 
 	kprintf (

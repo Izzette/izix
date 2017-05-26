@@ -5,7 +5,9 @@
 
 #include <stdint.h>
 
-typedef struct __attribute__((packed)) kthread_eflags_struct {
+#include <attributes.h>
+
+typedef struct PACKED kthread_eflags_struct {
 	unsigned char cflg  : 1;
 	unsigned char _rsv0 : 1; // always 1
 	unsigned char pflg  : 1;

@@ -5,6 +5,8 @@
 
 #include <stdbool.h>
 
+#include <attributes.h>
+
 typedef volatile int native_lock_t;
 
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
@@ -15,17 +17,17 @@ static inline volatile native_lock_t new_native_lock () {
 }
 #pragma GCC diagnostic pop
 
-__attribute__((optimize("O3")))
+FAST
 static inline bool native_lock_try_lock (native_lock_t *lock) {
 	return !(__sync_lock_test_and_set (lock, 1));
 }
 
-__attribute__((optimize("O3")))
+FAST
 static inline void native_lock_release (native_lock_t *lock) {
 	__sync_lock_release (lock);
 }
 
-__attribute__((optimize("O3")))
+FAST
 static inline bool native_lock_is_locked (native_lock_t *lock) {
 	if (native_lock_try_lock (lock)) {
 		native_lock_release (lock);

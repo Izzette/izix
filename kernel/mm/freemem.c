@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include <attributes.h>
 #include <collections/bintree.h>
 #include <collections/sparse_collection.h>
 
@@ -19,9 +20,9 @@
 //       Perhaps, this should be solved of sooner rather than later ...
 
 // This subsystem accounts for a very large quantity of code in this kernel, thus we've
-// added __attribute__((optimize("Os")))
+// added SMALL
 
-typedef struct __attribute__((packed)) freemem_zero_width_struct {
+typedef struct PACKED freemem_zero_width_struct {
 } freemem_zero_width_t;
 
 TPL_BINTREE (region, size_t)
@@ -54,7 +55,7 @@ static spinlock_t
 	*freemem_lock = &freemem_lock_base;
 
 // Panics if perfect matches cannot be found.
-__attribute__((optimize("Os")))
+SMALL
 static bintree_region_node_t *freemem_get_nodes (
 		freemem_region_t region,
 		bintree_length_node_t **length_node_ptr,
@@ -91,7 +92,7 @@ static bintree_region_node_t *freemem_get_nodes (
 	return region_node;
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static void freemem_delete (freemem_region_t region) {
 	bintree_region_node_t *region_node;
 	bintree_length_node_t *length_node;
@@ -114,7 +115,7 @@ static void freemem_delete (freemem_region_t region) {
 	}
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static void freemem_insert (freemem_region_t region) {
 	bintree_region_node_t *region_node, *region_conflict;
 	bintree_length_node_t *length_node, *length_conflict;
@@ -175,7 +176,7 @@ static void freemem_insert (freemem_region_t region) {
 	length_node->data = p_tree->get_fields (p_tree);
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static bool freemem_is_consecutive (
 		freemem_region_t region1,
 		freemem_region_t region2
@@ -193,7 +194,7 @@ static bool freemem_is_consecutive (
 	return high_region.p == low_region.p + low_region.length;
 }
 
-__attribute__((optimize("Os")))
+SMALL
 static bool freemem_is_subset (
 		freemem_region_t set,
 		freemem_region_t subset
@@ -207,7 +208,7 @@ static bool freemem_is_subset (
 }
 
 // Assumed consecutive.
-__attribute__((optimize("Os")))
+SMALL
 static freemem_region_t freemem_join (
 		freemem_region_t region1,
 		freemem_region_t region2
@@ -232,7 +233,7 @@ static freemem_region_t freemem_join (
 }
 
 // returns joined entry, or new_freemem_region (NULL, 0).
-__attribute__((optimize("Os")))
+SMALL
 static freemem_region_t freemem_maybe_join (
 		freemem_region_t region1,
 		freemem_region_t region2
@@ -437,6 +438,7 @@ static freemem_region_t freemem_alloc_internal (
 }
 
 // Must be called before initializing kthreads
+COLD
 void freemem_init (void *internal, size_t internal_length) {
 	freemem_lock_base = new_spinlock ();
 

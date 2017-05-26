@@ -1,4 +1,5 @@
 kernel/arch/x86/sched/kthread_preempt.o: \
+		libk/include/attributes.h \
 		kernel/include/kprint/kprint.h \
 		kernel/include/sched/kthread.h \
 		kernel/include/time/time.h \

@@ -1,4 +1,5 @@
 kernel/sched/mutex.o: \
+		libk/include/attributes.h \
 		libk/include/collections/linked_list.h \
 		kernel/include/mm/malloc.h \
 		kernel/include/sched/mutex.h \

@@ -1,5 +1,7 @@
 // kernel/arch/x86/drivers/pic_8259/pic_8259.c
 
+#include <attributes.h>
+
 #include <asm/io.h>
 #include <int/idt.h>
 #include <irq/irq.h>
@@ -7,6 +9,7 @@
 #include <dev/dev_types.h>
 #include <dev/dev_driver.h>
 #include <mm/page.h>
+#include <pic_8259/pic_8259.h>
 
 // Some of these functions are used by IRQ handlers, which must be very fast.
 
@@ -58,7 +61,7 @@ static irq_t pic_8259_get_relative_irq (irq_t irq) {
 	return irq;
 }
 
-__attribute__((optimize("O3")))
+FAST HOT
 static uint16_t pic_8259_get_pic_cmd_port (irq_t irq) {
 	if (pic_8259_is_master_irq (irq))
 		return PIC_MASTER_CMD;
@@ -83,11 +86,12 @@ static page_t *pic_8259_next_page_mapping (
 }
 #pragma GCC diagnostic pop
 
-__attribute__((optimize("O3")))
+FASTCALL FAST HOT
 void pic_8259_send_eoi (irq_t irq) {
 	outb (PIC_EOI, pic_8259_get_pic_cmd_port (irq));
 }
 
+COLD
 void pic_8259_reinit () {
 	unsigned char mask_master, mask_slave;
 

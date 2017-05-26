@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <attributes.h>
+
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
 #include <mm/malloc.h>
@@ -91,7 +93,7 @@ typedef enum gdt_granularity_enum {
 
 #define GDT_NULL ((gdt_entry_null_t)0x0000000000000000)
 
-typedef struct __attribute__((packed)) gdt_access_code_struct {
+typedef struct PACKED gdt_access_code_struct {
 	gdt_accessed_t        accessed   : 1;
 	gdt_code_readable_t   readable   : 1;
 	gdt_code_conforming_t conforming : 1;
@@ -101,7 +103,7 @@ typedef struct __attribute__((packed)) gdt_access_code_struct {
 	gdt_present_t         present    : 1;
 } gdt_access_code_t;
 
-typedef struct __attribute__((packed)) gdt_access_data_struct {
+typedef struct PACKED gdt_access_data_struct {
 	gdt_accessed_t       accessed   : 1;
 	gdt_data_writable_t  writable   : 1;
 	gdt_data_direction_t direction  : 1;
@@ -113,7 +115,7 @@ typedef struct __attribute__((packed)) gdt_access_data_struct {
 
 typedef uint8_t gdt_access_tss_t;
 
-typedef struct __attribute__((packed)) gdt_entry_code_struct {
+typedef struct PACKED gdt_entry_code_struct {
 	uint32_t          limit_low   : GDT_LIMIT_LOW_LENGTH;
 	uint32_t          base_low    : GDT_BASE_LOW_LENGTH;
 	gdt_access_code_t access;
@@ -125,7 +127,7 @@ typedef struct __attribute__((packed)) gdt_entry_code_struct {
 	uint32_t          base_high   : GDT_BASE_HIGH_LENGTH;
 } gdt_entry_code_t;
 
-typedef struct __attribute__((packed)) gdt_entry_data_struct {
+typedef struct PACKED gdt_entry_data_struct {
 	uint32_t          limit_low   : GDT_LIMIT_LOW_LENGTH;
 	uint32_t          base_low    : GDT_BASE_LOW_LENGTH;
 	gdt_access_data_t access;
@@ -137,7 +139,7 @@ typedef struct __attribute__((packed)) gdt_entry_data_struct {
 	uint32_t          base_high   : GDT_BASE_HIGH_LENGTH;
 } gdt_entry_data_t;
 
-typedef struct __attribute__((packed)) gdt_entry_tss_struct {
+typedef struct PACKED gdt_entry_tss_struct {
 	uint32_t          limit_low   : GDT_LIMIT_LOW_LENGTH;
 	uint32_t          base_low    : GDT_BASE_LOW_LENGTH;
 	gdt_access_tss_t  access;
@@ -158,13 +160,14 @@ typedef union gdt_entry_union {
 	gdt_entry_null_t   null;
 } gdt_entry_t;
 
-typedef struct __attribute__((packed)) gdt_register_struct {
+typedef struct PACKED gdt_register_struct {
 	uint16_t size; // Byte length minus 1;
 	gdt_entry_t *offset;
 } gdt_register_t;
 
 static gdt_register_t gdtr;
 
+COLD
 static void gdt_populate (tss_t *tss) {
 	const size_t s_null_i = 0;
 	const size_t s_code_i = GDT_SUPERVISOR_CODE_SELECTOR / sizeof(gdt_entry_t);
@@ -218,6 +221,7 @@ static void gdt_populate (tss_t *tss) {
 	};
 }
 
+COLD
 static void gdt_load () {
 	asm volatile (
 		"		lgdt	(%0);\n"
@@ -230,6 +234,7 @@ static void gdt_load () {
 	kputs ("mm/gdt: GDT loaded successfuly.\n");
 }
 
+COLD
 void gdt_init (tss_t *tss) {
 	// One NULL selector, a code and data selector for supervisor and userland, and one
 	// TSS selector.

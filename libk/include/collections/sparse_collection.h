@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <attributes.h>
+
 typedef struct sparse_collection_struct sparse_collection_t;
 typedef struct sparse_collection_struct {
 	int *bitmap;
@@ -31,7 +33,7 @@ typedef struct sparse_collection_##name##_struct { \
 	void *(*alloc) (sparse_collection_##name##_t *, size_t); \
 	bool (*insert) (sparse_collection_##name##_t *, const type *); \
 	void (*free) (sparse_collection_##name##_t *, const void *); \
-} __attribute__((__may_alias__)) sparse_collection_##name##_t; \
+} MAY_ALIAS sparse_collection_##name##_t; \
 \
 static inline sparse_collection_##name##_t new_sparse_collection_##name ( \
 	void *data, \
