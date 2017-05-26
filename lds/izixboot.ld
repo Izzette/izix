@@ -26,7 +26,7 @@ SECTIONS
         *(.text.startup)
         *(.init)
         *(.fini)
-        *(.text.cold)
+        *(.text.unlikely)
     }
 
     /* Data (initialized) */

@@ -10,7 +10,7 @@
 #include <sched/mutex.h>
 #include <sched/kthread.h>
 
-FASTCALL FAST HOT
+FASTCALL FAST
 void mutex_lock (mutex_t *mutex) {
 	if (!kthread_is_init ())
 		return;
@@ -53,7 +53,7 @@ void mutex_lock (mutex_t *mutex) {
 	}
 }
 
-FASTCALL FAST HOT
+FASTCALL FAST
 void mutex_release (mutex_t *mutex) {
 	if (!kthread_is_init ())
 		return;

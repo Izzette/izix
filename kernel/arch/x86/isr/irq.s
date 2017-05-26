@@ -22,7 +22,7 @@ isr_irq\irq_num:
 
 .code32
 
-.section	.text
+.section	.text.hot
 
 isr_irq_head 0
 isr_irq_head 1

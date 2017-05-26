@@ -8,23 +8,23 @@
 #include <sched/spinlock.h>
 #include <sched/kthread.h>
 
-FASTCALL FAST HOT
+FASTCALL FAST
 bool spinlock_try_lock (spinlock_t *lock) {
 	return native_lock_try_lock ((native_lock_t *)lock);
 }
 
-FASTCALL FAST HOT
+FASTCALL FAST
 void spinlock_lock (spinlock_t *lock) {
 	while (!spinlock_try_lock (lock))
 		kthread_yield ();
 }
 
-FASTCALL FAST HOT
+FASTCALL FAST
 void spinlock_release (spinlock_t *lock) {
 	native_lock_release ((native_lock_t *)lock);
 }
 
-FASTCALL FAST HOT
+FASTCALL FAST
 bool spinlock_is_locked (spinlock_t *lock) {
 	return native_lock_is_locked ((native_lock_t *)lock);
 }
