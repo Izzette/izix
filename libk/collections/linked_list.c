@@ -186,7 +186,7 @@ linked_list_node_t *linked_list_get (linked_list_t *this, size_t i) {
 }
 
 void linked_list_push (linked_list_t *this, linked_list_node_t *node) {
-	this->insert (this, 0, node);
+	linked_list_insert (this, 0, node);
 }
 
 FASTCALL FAST HOT
@@ -222,7 +222,7 @@ linked_list_node_t *linked_list_pop (linked_list_t *this) {
 
 	linked_list_node_t *node = this->start;
 
-	this->removeNode (this, node);
+	linked_list_removeNode (this, node);
 
 	return node;
 }
@@ -234,7 +234,7 @@ linked_list_node_t *linked_list_popEnd (linked_list_t *this) {
 
 	linked_list_node_t *node = this->end;
 
-	this->removeNode (this, node);
+	linked_list_removeNode (this, node);
 
 	return node;
 }
@@ -244,7 +244,7 @@ linked_list_node_t *linked_list_remove (linked_list_t *this, size_t i) {
 	if (!node)
 		return NULL;
 
-	this->removeNode (this, node);
+	linked_list_removeNode (this, node);
 
 	return node;
 }
