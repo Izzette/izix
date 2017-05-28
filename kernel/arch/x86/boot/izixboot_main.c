@@ -23,6 +23,8 @@
 #include <pic_8259/pic_8259.h>
 #include <pit_8253/pit_8253.h>
 #include <cmos/rtc.h>
+#include <time/time.h>
+#include <time/clock.h>
 #include <time/clock_tick.h>
 
 #define KERNEL_START      ((void *)0x8000)
@@ -173,6 +175,10 @@ void kernel_main (
 	enable_int ();
 
 	kthread_init (stack_region);
+
+	kprintf (
+		"boot/izixboot_main: Early boot took aprox. %lld ms.\n",
+		time_millis (clock_get_boot_time ()));
 
 	kthread_end_task ();
 }

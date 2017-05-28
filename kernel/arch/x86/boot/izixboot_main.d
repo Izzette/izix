@@ -17,4 +17,6 @@ kernel/arch/x86/boot/izixboot_main.o: \
 		kernel/arch/x86/include/isr/isr.h \
 		kernel/arch/x86/include/pic_8259/pic_8259.h \
 		kernel/arch/x86/include/pit_8253/pit_8253.h \
+		kernel/include/time/time.h \
+		kernel/include/time/clock.h \
 		kernel/arch/x86/include/time/clock_tick.h
