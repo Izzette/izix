@@ -16,7 +16,7 @@
 #include <cmos/cmos.h>
 #include <asm/toggle_int.h>
 
-#define RTC_BASE_MHZ 32768000000ULL
+#define RTC_BASE_HZ 32768
 
 typedef enum rtc_24h_enum {
 	rtc_24h_disable = 0b0,
@@ -120,9 +120,8 @@ rtc_rate_t rtc_get_rate () {
 }
 
 time_t rtc_interval_from_rate (rtc_rate_t rate) {
-	uint64_t rtc_div_mhz = RTC_BASE_MHZ >> (rate - 1);
-	time_nanos_t ns =
-		(TIME_NANOS_PER_SEC * TIME_MICROS_PER_SEC) / rtc_div_mhz;
+	uint64_t rtc_div_hz = RTC_BASE_HZ >> (rate - 1);
+	time_nanos_t ns = TIME_NANOS_PER_SEC / rtc_div_hz;
 
 	return time_from_nanos (ns);
 }

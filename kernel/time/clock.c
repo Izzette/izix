@@ -7,48 +7,47 @@
 
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
-#include <sched/kthread.h>
+#include <sched/mutex.h>
 #include <time/time.h>
 #include <time/clock.h>
 
-// First known real time.
-static time_t clock_boot_rt = 0;
+#define CLOCK_INTERVAL \
+	((time_t)(time_from_nanos (time_nanos (time_from_secs (1)) / CLOCKS_PER_SEC)))
+
+// clock_ticks is *not* updated atomically and must be lock-free. See
+// clock_fetch_ticks_lock_free.
+
+// Clock ticks grand total.
+static volatile clock_t clock_ticks = 0;
+// Interval of a slow clock tick, this should be updated once before enabling the clock.
+time_t clock_real_interval_multiplier = 0;
+clock_t clock_real_interval_divisor = 0;
+
+// clock_last_*_ticks and clock_*_rt protected by the locks clock_ticks_mutex and
+// clock_time_mutex, respectively.  See clock_fetch_ticks and clock_fetch_time.
+
+// Clock ticks before clock_last_known_rt.
+static volatile clock_t clock_last_known_ticks = 0;
+// Clock ticks before clock_wake_rt.
+static volatile clock_t clock_last_wake_ticks = 0;
+
 // First known real time since last wake.
 static time_t clock_wake_rt = 0;
 // Last known real time.
 static time_t clock_last_known_rt = 0;
 
-// Ticks and clock_fast are *not* updated atomically, they must be read twice
-// until the same result is obtained!
+// Lock for clock_last_*_ticks.
+static mutex_t
+	clock_ticks_mutex_base,
+	*clock_ticks_mutex = &clock_ticks_mutex_base;
+// Lock for clock_*_rt.
+static mutex_t
+	clock_time_mutex_base,
+	*clock_time_mutex = &clock_time_mutex_base;
 
-// Clock ticks grand total.
-static volatile clock_t clock_ticks = 0;
-// Clock ticks before clock_lask_known_rt.
-static volatile clock_t clock_last_known_ticks = 0;
-// Clock ticks before clock_wake_rt.
-static volatile clock_t clock_last_wake_ticks = 0;
-// Clock ticks before clock_boot_rt.
-static volatile clock_t clock_last_boot_ticks = 0;
-// Fast clock updates.
-static volatile time_t clock_fast = 0;
-// Fast clock state at last tick.
-static volatile time_t clock_fast_last_tick = 0;
-
-clock_t clocks_per_sec = (clock_t)-1;
-time_t clock_interval = 0;
-
+// For use with clock_ticks only!
 FAST
-static time_t clock_get_time_atomic (volatile time_t *t_ptr) {
-	time_t t = *t_ptr;
-
-	while ((t != *t_ptr))
-		t = *t_ptr;
-
-	return t;
-}
-
-FAST
-static clock_t clock_get_clock_atomic (volatile clock_t *c_ptr) {
+static clock_t clock_fetch_clock_lock_free (volatile clock_t *c_ptr) {
 	clock_t c = *c_ptr;
 
 	while ((c != *c_ptr))
@@ -57,103 +56,84 @@ static clock_t clock_get_clock_atomic (volatile clock_t *c_ptr) {
 	return c;
 }
 
+// For use with clock_last_*_ticks only!
 FAST
-static bool clock_tick_occured (clock_t last_ticks) {
-	return last_ticks != clock_get_clock_atomic (&clock_ticks);
+static clock_t clock_fetch_clock (volatile clock_t *c_ptr) {
+	mutex_lock (clock_ticks_mutex);
+	const clock_t c = *c_ptr;
+	mutex_release (clock_ticks_mutex);
+
+	return c;
+}
+
+// For use with clock_*_rt only!
+FAST
+static time_t clock_fetch_time (volatile time_t *t_ptr) {
+	mutex_lock (clock_time_mutex);
+	const time_t t = *t_ptr;
+	mutex_release (clock_time_mutex);
+
+	return t;
+}
+
+CONSTRUCTOR
+static void clock_construct () {
+	clock_ticks_mutex_base = new_mutex ();
+	clock_time_mutex_base = new_mutex ();
 }
 
 FAST
 clock_t clock_get_ticks () {
-	return clock_get_clock_atomic (&clock_ticks);
-}
+	// Ticks and fast_last_tick must be obtained within the same slow tick.
+	const clock_t ticks = clock_fetch_clock_lock_free (&clock_ticks);
 
-FAST
-clock_t clock_get_boot_ticks () {
-	clock_t ticks, last_boot_ticks;
+	// The time in ticks.
+	const time_t tick_time =
+		clock_real_interval_multiplier * ticks / clock_real_interval_divisor;
 
-	do {
-		ticks = clock_get_ticks ();
-		last_boot_ticks = clock_get_clock_atomic (&clock_last_boot_ticks);
-	} while (clock_tick_occured (ticks));
-
-	const clock_t boot_ticks = ticks - last_boot_ticks;
-
-	return clock_interval * boot_ticks;
+	// Fake XSI-compliant 1000000 ticks per second.
+	return tick_time / CLOCK_INTERVAL;
 }
 
 FAST
 clock_t clock_get_wake_ticks () {
-	clock_t ticks, last_wake_ticks;
-
-	do {
-		ticks = clock_get_ticks ();
-		last_wake_ticks = clock_get_clock_atomic (&clock_last_wake_ticks);
-	} while (clock_tick_occured (ticks));
+	const clock_t last_wake_ticks = clock_fetch_clock (&clock_last_wake_ticks);
+	const clock_t ticks = clock_get_ticks ();
 
 	const clock_t wake_ticks = ticks - last_wake_ticks;
 
-	return clock_interval * wake_ticks;
+	return wake_ticks;
 }
 
 FAST
 time_t clock_get_time () {
-	clock_t ticks;
-	time_t last_known_rt;
+	const time_t last_known_rt = clock_fetch_time (&clock_last_known_rt);
+	// If we don't know the time, return the time since boot.
+	if (!last_known_rt)
+		return clock_get_boot_time ();
 
-	do {
-		ticks = clock_get_ticks ();
-		last_known_rt = clock_get_time_atomic (&clock_last_known_rt);
-	} while (clock_tick_occured (ticks));
+	const clock_t ticks = clock_fetch_clock (&clock_last_known_ticks);
 
-	return clock_interval * ticks + last_known_rt;
-}
-
-FAST
-time_t clock_get_fast_time () {
-	clock_t ticks;
-	time_t slow_time;
-	time_t fast_last_tick;
-
-	do {
-		ticks = clock_get_ticks ();
-		slow_time = clock_get_time ();
-		fast_last_tick = clock_get_time_atomic (&clock_fast_last_tick);
-	} while (clock_tick_occured (ticks));
-
-	const time_t fast = clock_get_time_atomic (&clock_fast);
-	const time_t fast_since_last_tick = fast - fast_last_tick;
-
-	return fast_since_last_tick + slow_time;
-}
-
-FAST
-time_t clock_get_boot_time () {
-	time_t ticks;
-	clock_t boot_ticks;
-	time_t boot_rt;
-
-	do {
-		ticks = clock_get_ticks ();
-		boot_ticks = clock_get_boot_ticks ();
-		boot_rt = clock_get_time_atomic (&clock_boot_rt);
-	} while (clock_tick_occured (ticks));
-
-	return clock_interval * boot_ticks + boot_rt;
+	return CLOCK_INTERVAL * ticks + last_known_rt;
 }
 
 FAST
 time_t clock_get_wake_time () {
-	time_t ticks;
-	clock_t wake_ticks;
-	time_t wake_rt;
+	const time_t wake_rt = clock_fetch_time (&clock_wake_rt);
+	// If we don't know the last wake time, return the time since boot.
+	if (!wake_rt)
+		return clock_get_boot_time ();
 
-	do {
-		ticks = clock_get_ticks ();
-		wake_ticks = clock_get_wake_ticks ();
-		wake_rt = clock_get_time_atomic (&clock_wake_rt);
-	} while (clock_tick_occured (ticks));
+	const clock_t wake_ticks = clock_get_wake_ticks ();
 
-	return clock_interval * wake_ticks + wake_rt;
+	return CLOCK_INTERVAL * wake_ticks + wake_rt;
+}
+
+FAST
+time_t clock_get_boot_time () {
+	const clock_t boot_ticks = clock_get_ticks ();
+
+	return CLOCK_INTERVAL * boot_ticks;
 }
 
 void clock_set_time (time_t t) {
@@ -162,14 +142,17 @@ void clock_set_time (time_t t) {
 		kpanic ();
 	}
 
-	if (!clock_get_time_atomic (&clock_wake_rt)) {
-		// Also sets clock_last_known_rt;
+	if (!clock_fetch_time (&clock_wake_rt)) {
 		clock_set_wake_time (t);
 	} else {
-		kthread_lock_task ();
+		const clock_t ticks = clock_get_ticks ();
+
+		mutex_lock (clock_ticks_mutex);
+		mutex_lock (clock_time_mutex);
+		clock_last_known_ticks = ticks;
 		clock_last_known_rt = t;
-		clock_last_known_ticks = clock_get_ticks ();
-		kthread_unlock_task ();
+		mutex_release (clock_time_mutex);
+		mutex_release (clock_ticks_mutex);
 	}
 }
 
@@ -179,33 +162,21 @@ void clock_set_wake_time (time_t t) {
 		kpanic ();
 	}
 
-	if (!clock_get_time_atomic (&clock_boot_rt)) {
-		kthread_lock_task ();
-		clock_boot_rt = t;
-		clock_last_boot_ticks = clock_get_ticks ();
-		kthread_unlock_task ();
-	}
+	const clock_t ticks = clock_get_ticks ();
 
-	kthread_lock_task ();
+	mutex_lock (clock_ticks_mutex);
+	mutex_lock (clock_time_mutex);
+	clock_last_known_rt = t;
+	clock_last_known_ticks = ticks;
 	clock_wake_rt = t;
-	clock_last_wake_ticks = clock_get_ticks ();
-	kthread_unlock_task ();
-
-	// Will not call this function, because clock_wake_rt is set.
-	clock_set_time (t);
+	clock_last_wake_ticks = ticks;
+	mutex_release (clock_time_mutex);
+	mutex_release (clock_ticks_mutex);
 }
 
 FAST HOT
 void clock_tick () {
 	clock_ticks += 1;
-}
-
-FASTCALL FAST HOT
-void clock_add_fast_time (time_t t) {
-	// Gurenteed not to change, clock_tick and clock_add_fast_time together
-	// are a critical section.
-	clock_fast_last_tick = clock_fast;
-	clock_fast += t;
 }
 
 // vim: set ts=4 sw=4 noet syn=c:
