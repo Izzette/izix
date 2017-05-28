@@ -69,6 +69,8 @@ typedef struct PACKED pit_8253_mode_struct {
 	pit_8253_channel_t   channel   : 2;
 } pit_8253_mode_t;
 
+time_t pit_8253_current_interval;
+
 static page_t *pit_8253_next_page_mapping (dev_driver_t *, page_t *, bool *);
 
 static dev_driver_t pit_8253_driver = {
@@ -79,6 +81,12 @@ static dev_driver_t pit_8253_driver = {
 	},
 	.next_page_mapping = pit_8253_next_page_mapping
 };
+
+CONSTRUCTOR
+static void pit_8253_construct () {
+	// Probably set to max internval
+	pit_8253_current_interval = PIT_8253_INTERVAL_MAX;
+}
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static page_t *pit_8253_next_page_mapping (
@@ -127,6 +135,8 @@ void pit_8253_set_interval (time_t t) {
 
 	outb (pit_8253_divider_low  (divider), PIT_8253_CH0_PORT);
 	outb (pit_8253_divider_high (divider), PIT_8253_CH0_PORT);
+
+	pit_8253_current_interval = t;
 
 	if (!was_masked)
 		pic_8259_unmask (0);

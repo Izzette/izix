@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <time/time.h>
+#include <dev/dev_driver.h>
 
 // PIT base frequency in MHz (~1.19318167 MHZ)
 #define PIT_8253_BASE_MEGAHZ 1.19318167l
@@ -20,6 +21,8 @@
 	pit_8253_interval (PIT_8253_DIVIDER_MAX)
 
 typedef uint16_t pit_8253_divider_t;
+
+extern time_t pit_8253_current_interval;
 
 // The interval a divider gives.
 static inline time_t pit_8253_interval (pit_8253_divider_t divider) {

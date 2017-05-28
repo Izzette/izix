@@ -66,7 +66,24 @@ objects_drivers_x86_pic_8259 := \
 objects_drivers_x86_pit_8253 := pit_8253.o
 objects_drivers_x86_pit_8253 := \
 	$(addprefix kernel/arch/$(ARCH)/drivers/pit_8253/,$(objects_drivers_x86_pit_8253))
-objects_drivers := $(objects_drivers) $(objects_drivers_x86_pic_8259) $(objects_drivers_x86_pit_8253)
+objects_drivers_x86_cmos := cmos.o nmi.o rtc.o
+objects_drivers_x86_cmos := \
+	$(addprefix kernel/arch/$(ARCH)/drivers/cmos/,$(objects_drivers_x86_cmos))
+objects_drivers := \
+	$(objects_drivers) \
+	$(objects_drivers_x86_pic_8259) \
+	$(objects_drivers_x86_pit_8253) \
+	$(objects_drivers_x86_cmos)
+endif
+
+objects_time := clock.o
+objects_time := $(addprefix kernel/time/,$(objects_time))
+
+ifeq (x86,$(ARCH))
+objects_time_x86 := clock_tick.o
+objects_time_x86 := \
+	$(addprefix kernel/arch/$(ARCH)/time/,$(objects_time_x86))
+objects_time := $(objects_time) $(objects_time_x86)
 endif
 
 objects_dev := dev.o
@@ -165,6 +182,7 @@ asm_source_objects := \
 c_source_objects := \
 	$(objects_boot) \
 	$(objects_drivers) \
+	$(objects_time) \
 	$(objects_dev) \
 	$(objects_kprint) \
 	$(objects_kpanic) \
@@ -206,6 +224,7 @@ objects_begin_crt := $(addprefix kernel/arch/$(ARCH)/crt/,$(objects_begin_crt))
 objects_kernel := \
 	$(objects_boot) \
 	$(objects_drivers) \
+	$(objects_time) \
 	$(objects_dev) \
 	$(objects_mm) \
 	$(objects_sched) \

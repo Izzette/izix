@@ -6,4 +6,5 @@ kernel/arch/x86/irq/irq.o: \
 		kernel/include/kpanic/kpanic.h \
 		kernel/arch/x86/include/asm/toggle_int.h \
 		kernel/arch/x86/include/pic_8259/pic_8259.h \
+		kernel/arch/x86/include/irq/irq_vectors.h \
 		kernel/arch/x86/include/irq/irq.h

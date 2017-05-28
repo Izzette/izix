@@ -3,6 +3,8 @@
 #ifndef IZIX_IRQ_VECTORS_H
 #define IZIX_IRQ_VECTORS_H 1
 
+#define IRQ_VECTOR_OFFSET 0x20
+
 typedef enum irq_vectors_enum {
 	IRQ_VECTOR_IRQ0  = 0x20,
 	IRQ_VECTOR_IRQ1  = 0x21,

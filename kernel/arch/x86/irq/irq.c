@@ -7,6 +7,7 @@
 #include <mm/malloc.h>
 #include <kprint/kprint.h>
 #include <kpanic/kpanic.h>
+#include <irq/irq_vectors.h>
 #include <irq/irq.h>
 #include <pic_8259/pic_8259.h>
 
@@ -84,8 +85,12 @@ void irq_init () {
 	}
 
 	for (irq = 0; IRQ_NUMBER_OF_IRQ_LINES > irq; ++irq) {
+		// Don't mask the slave PIC_8253
+		if (2 == irq)
+			continue;
+
 		// If there are no handlers, then there is no point in recieving those interupts.
-		pic_8259_mask (irq);
+		pic_8259_mask (IRQ_VECTOR_OFFSET + irq);
 
 		*irq_get_pre_hook_list  (irq) = new_linked_list_irq_hook ();
 		*irq_get_post_hook_list (irq) = new_linked_list_irq_hook ();
