@@ -36,7 +36,7 @@ typedef enum rtc_tick_enum {
 typedef struct PACKED rtc_status_a_struct {
 	rtc_rate_t    rate  : 4;
 	unsigned char _rsv0 : 4; // ???
-} rtc_status_a_t;
+} MAY_ALIAS rtc_status_a_t;
 
 
 typedef struct PACKED rtc_status_b_struct {
@@ -47,7 +47,7 @@ typedef struct PACKED rtc_status_b_struct {
 	unsigned char _rsv1       : 3; // ???
 	rtc_tick_t    tick        : 1;
 	unsigned char _rsv2       : 1; // ???
-} rtc_status_b_t;
+} MAY_ALIAS rtc_status_b_t;
 
 static page_t *rtc_next_page_mapping (dev_driver_t *, page_t *, bool *);
 static dev_driver_t rtc_driver = {

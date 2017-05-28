@@ -12,9 +12,7 @@
 typedef unsigned long long clock_t;
 
 extern clock_t clocks_per_sec;
-
-// With the exception of clock_tick and clock_add_fast_time, these functions
-// CANNOT be called in INTERUPT HANDLERS!
+extern time_t clock_interval;
 
 // The total number of recorded ticks.
 clock_t clock_get_ticks ();
@@ -22,6 +20,8 @@ clock_t clock_get_ticks ();
 clock_t clock_get_boot_ticks ();
 // The number of clock ticks since last wake.
 clock_t clock_get_wake_ticks ();
+
+// The clock_get_*time* functions CANNOT be called in INTERUPT HANDLERS!
 
 // The time since the Unix Epoch, or zero if unknown.
 time_t clock_get_time ();

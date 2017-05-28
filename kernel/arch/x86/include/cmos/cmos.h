@@ -31,9 +31,8 @@ typedef struct PACKED cmos_command_struct {
 	cmos_register_t cmosr : 7;
 // NMI enable/disable bit.
 	nmi_enable_t    nmi   : 1;
-} cmos_command_t;
+} MAY_ALIAS cmos_command_t;
 
-cmos_command_t cmos_get_cmd ();
 void cmos_set_cmd (cmos_command_t);
 char cmos_get (cmos_register_t);
 // NEVER EVER set a non RTC register!  They are often used by the BIOS and may cause a

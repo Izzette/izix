@@ -61,14 +61,6 @@ static irq_t pic_8259_get_relative_irq (irq_t irq) {
 	return irq;
 }
 
-FAST HOT
-static uint16_t pic_8259_get_pic_cmd_port (irq_t irq) {
-	if (pic_8259_is_master_irq (irq))
-		return PIC_MASTER_CMD;
-
-	return PIC_SLAVE_CMD;
-}
-
 static uint16_t pic_8259_get_pic_data_port (irq_t irq) {
 	if (pic_8259_is_master_irq (irq))
 		return PIC_MASTER_DATA;
@@ -88,7 +80,10 @@ static page_t *pic_8259_next_page_mapping (
 
 FASTCALL FAST HOT
 void pic_8259_send_eoi (irq_t irq) {
-	outb (PIC_EOI, pic_8259_get_pic_cmd_port (irq));
+	if (pic_8259_is_slave_irq (irq))
+		outb (PIC_EOI, PIC_SLAVE_CMD);
+
+	outb (PIC_EOI, PIC_MASTER_CMD);
 }
 
 COLD

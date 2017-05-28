@@ -6,11 +6,12 @@
 #include <pit_8253/pit_8253.h>
 #include <cmos/cmos.h>
 #include <cmos/rtc.h>
+#include <time/time.h>
 #include <time/clock.h>
 #include <time/clock_tick.h>
 
 // TODO: define based on bogomips.
-#define CLOCK_TICK_RTC_RATE (RTC_FASTEST_RATE + 1)
+#define CLOCK_TICK_RTC_RATE 9
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 FASTCALL FAST HOT
@@ -26,7 +27,8 @@ static void clock_tick_pit_8253_irq0_hook (irq_t irq) {
 #pragma GCC diagnostic pop
 
 void clock_tick_start () {
-	clocks_per_sec = rtc_interval_from_rate (CLOCK_TICK_RTC_RATE);
+	clock_interval = rtc_interval_from_rate (CLOCK_TICK_RTC_RATE);
+	clocks_per_sec = time_from_secs (1) / clock_interval;
 	rtc_set_rate (CLOCK_TICK_RTC_RATE);
 	rtc_irq_enable ();
 

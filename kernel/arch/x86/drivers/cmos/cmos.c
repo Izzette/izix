@@ -3,27 +3,25 @@
 #include <kpanic/kpanic.h>
 #include <kprint/kprint.h>
 #include <cmos/cmos.h>
+#include <cmos/nmi.h>
 #include <asm/io.h>
 
 #define CMOS_CMD_PORT  0x70
 #define CMOS_DATA_PORT 0x71
-
-cmos_command_t cmos_get_cmd () {
-	const char cmd_register = inb (CMOS_CMD_PORT);
-	return *(cmos_command_t *)&cmd_register;
-}
 
 void cmos_set_cmd (cmos_command_t cmd) {
 	outb (*(char *)&cmd, CMOS_CMD_PORT);
 }
 
 char cmos_get (cmos_register_t cmosr) {
-	cmos_command_t cmd = cmos_get_cmd ();
-	cmd.cmosr = cmosr;
+	cmos_command_t cmd = {
+		.cmosr = cmosr,
+		.nmi = nmi_enable
+	};
 
 	cmos_set_cmd (cmd);
 	// Wait extra long ...
-	for (size_t i; 4 > i; ++i)
+	for (size_t i = 0; 4 > i; ++i)
 		io_wait ();
 
 	return inb (CMOS_DATA_PORT);
@@ -47,12 +45,14 @@ void cmos_set (char c, cmos_register_t cmosr) {
 			kpanic ();
 	}
 
-	cmos_command_t cmd = cmos_get_cmd ();
-	cmd.cmosr = cmosr;
+	cmos_command_t cmd = {
+		.cmosr = cmosr,
+		.nmi = nmi_enable
+	};
 
 	cmos_set_cmd (cmd);
 	// Wait extra long ...
-	for (size_t i; 4 > i; ++i)
+	for (size_t i = 0; 4 > i; ++i)
 		io_wait ();
 
 	outb (c, CMOS_DATA_PORT);

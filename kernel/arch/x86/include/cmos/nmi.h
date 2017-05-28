@@ -3,6 +3,10 @@
 #ifndef IZIX_NMI_H
 #define IZIX_NMI_H 1
 
+#include <cmos/cmos.h>
+
+extern nmi_enable_t nmi_enable;
+
 void enable_nmi ();
 void disable_nmi ();
 

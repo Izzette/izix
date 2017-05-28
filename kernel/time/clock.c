@@ -1,6 +1,7 @@
 // kernel/time/clock.c
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <attributes.h>
 
@@ -33,16 +34,15 @@ static volatile time_t clock_fast = 0;
 // Fast clock state at last tick.
 static volatile time_t clock_fast_last_tick = 0;
 
-clock_t clocks_per_sec = 0;
+clock_t clocks_per_sec = (clock_t)-1;
+time_t clock_interval = 0;
 
 FAST
 static time_t clock_get_time_atomic (volatile time_t *t_ptr) {
 	time_t t = *t_ptr;
 
-	while ((t != *t_ptr)) {
-		kthread_yield ();
+	while ((t != *t_ptr))
 		t = *t_ptr;
-	}
 
 	return t;
 }
@@ -78,7 +78,7 @@ clock_t clock_get_boot_ticks () {
 
 	const clock_t boot_ticks = ticks - last_boot_ticks;
 
-	return CLOCKS_PER_SEC * boot_ticks;
+	return clock_interval * boot_ticks;
 }
 
 FAST
@@ -92,7 +92,7 @@ clock_t clock_get_wake_ticks () {
 
 	const clock_t wake_ticks = ticks - last_wake_ticks;
 
-	return CLOCKS_PER_SEC * wake_ticks;
+	return clock_interval * wake_ticks;
 }
 
 FAST
@@ -105,7 +105,7 @@ time_t clock_get_time () {
 		last_known_rt = clock_get_time_atomic (&clock_last_known_rt);
 	} while (clock_tick_occured (ticks));
 
-	return CLOCKS_PER_SEC * ticks + last_known_rt;
+	return clock_interval * ticks + last_known_rt;
 }
 
 FAST
@@ -138,7 +138,7 @@ time_t clock_get_boot_time () {
 		boot_rt = clock_get_time_atomic (&clock_boot_rt);
 	} while (clock_tick_occured (ticks));
 
-	return CLOCKS_PER_SEC * boot_ticks + boot_rt;
+	return clock_interval * boot_ticks + boot_rt;
 }
 
 FAST
@@ -153,7 +153,7 @@ time_t clock_get_wake_time () {
 		wake_rt = clock_get_time_atomic (&clock_wake_rt);
 	} while (clock_tick_occured (ticks));
 
-	return CLOCKS_PER_SEC * wake_ticks + wake_rt;
+	return clock_interval * wake_ticks + wake_rt;
 }
 
 void clock_set_time (time_t t) {
@@ -166,8 +166,10 @@ void clock_set_time (time_t t) {
 		// Also sets clock_last_known_rt;
 		clock_set_wake_time (t);
 	} else {
+		kthread_lock_task ();
 		clock_last_known_rt = t;
 		clock_last_known_ticks = clock_get_ticks ();
+		kthread_unlock_task ();
 	}
 }
 
@@ -178,12 +180,16 @@ void clock_set_wake_time (time_t t) {
 	}
 
 	if (!clock_get_time_atomic (&clock_boot_rt)) {
+		kthread_lock_task ();
 		clock_boot_rt = t;
 		clock_last_boot_ticks = clock_get_ticks ();
+		kthread_unlock_task ();
 	}
 
+	kthread_lock_task ();
 	clock_wake_rt = t;
 	clock_last_wake_ticks = clock_get_ticks ();
+	kthread_unlock_task ();
 
 	// Will not call this function, because clock_wake_rt is set.
 	clock_set_time (t);
@@ -198,7 +204,7 @@ FASTCALL FAST HOT
 void clock_add_fast_time (time_t t) {
 	// Gurenteed not to change, clock_tick and clock_add_fast_time together
 	// are a critical section.
-	clock_fast_last_tick = clock_ticks;
+	clock_fast_last_tick = clock_fast;
 	clock_fast += t;
 }
 

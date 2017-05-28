@@ -29,7 +29,7 @@ typedef struct PACKED kthread_eflags_struct {
 	unsigned char vip   : 1;
 	unsigned char id    : 1;
 	unsigned short _rsv4 : 10;
-} kthread_eflags_t;
+} MAY_ALIAS kthread_eflags_t;
 
 // Order defined by assembly in kthread_switch.s
 typedef struct kthread_registers_struct {
