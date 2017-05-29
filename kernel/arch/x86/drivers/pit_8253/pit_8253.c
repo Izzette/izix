@@ -136,7 +136,7 @@ void pit_8253_set_interval (time_t t) {
 	outb (pit_8253_divider_low  (divider), PIT_8253_CH0_PORT);
 	outb (pit_8253_divider_high (divider), PIT_8253_CH0_PORT);
 
-	pit_8253_current_interval = t;
+	pit_8253_current_interval = pit_8253_interval (t);
 
 	if (!was_masked)
 		pic_8259_unmask (0);

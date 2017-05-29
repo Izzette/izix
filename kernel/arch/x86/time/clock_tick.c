@@ -11,9 +11,15 @@
 #include <time/clock_tick.h>
 
 // TODO: define based on bogomips.
-#define CLOCK_TICK_RTC_RATE 9
+#define CLOCK_TICK_RTC_RATE 10
+#define CLOCK_TICK_PIT_INTERVAL (time_from_millis (1))
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+FASTCALL FAST HOT
+static void clock_tick_pit_8253_irq0_hook (irq_t irq) {
+	clock_fast_add (pit_8253_current_interval);
+}
+
 FASTCALL FAST HOT
 static void clock_tick_rtc_irq8_hook (irq_t irq) {
 	clock_tick ();
@@ -27,9 +33,12 @@ void clock_tick_start () {
 	// any bits.
 	clock_real_interval_divisor = 1;
 
+	pit_8253_set_interval (CLOCK_TICK_PIT_INTERVAL);
+
 	rtc_set_rate (CLOCK_TICK_RTC_RATE);
 	rtc_irq_enable ();
 
+	irq_add_pre_hook (0, clock_tick_pit_8253_irq0_hook);
 	irq_add_pre_hook (8, clock_tick_rtc_irq8_hook);
 
 	// Clear any pending RTC interupts.

@@ -8,10 +8,12 @@
 #include <time/time.h>
 
 #define CLOCKS_PER_SEC ((clock_t)1000000)
+#define CLOCK_INTERVAL \
+	((time_t)(time_from_nanos (time_nanos (time_from_secs (1)) / CLOCKS_PER_SEC)))
 
 typedef unsigned long long clock_t;
 
-// The clock tick for the real clock interval.
+// The interval for the clock tick, multiplier and divisor to avoid rounding errors`.
 extern time_t clock_real_interval_multiplier;
 extern clock_t clock_real_interval_divisor;
 
@@ -34,10 +36,13 @@ void clock_set_time (time_t);
 // Set the time since last wake.
 void clock_set_wake_time (time_t);
 
-// This function is a NON-REENTRANT CRITICAL SECTIONS and MUST BE EXECUTED
+// These functions together form one NON-REENTRANT CRITICAL SECTION and MUST BE EXECUTED
 // TO COMPLETION but *can* be called in interrupt handlers.
 // Add a clock tick.
 void clock_tick ();
+// Add to the fast clock.
+FASTCALL
+void clock_fast_add (time_t);
 
 #endif
 
