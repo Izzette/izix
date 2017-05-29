@@ -9,6 +9,7 @@
 #include <collections/linked_list.h>
 
 #include <sched/native_lock.h>
+#include <sched/spinlock.h>
 #include <sched/kthread.h>
 
 TPL_LINKED_LIST(mutex_kpid, kpid_t)
@@ -21,6 +22,7 @@ typedef linked_list_mutex_kpid_iterator_t mutex_kpid_list_iterator_t;
 
 typedef volatile struct mutex_struct {
 	native_lock_t native_lock_base;
+	spinlock_t internal_spinlock_base;
 	linked_list_mutex_kpid_t waiting_kpids_base;
 } mutex_t;
 
@@ -28,6 +30,7 @@ typedef volatile struct mutex_struct {
 static inline mutex_t new_mutex () {
 	mutex_t mutex = {
 		.native_lock_base = new_native_lock (),
+		.internal_spinlock_base = new_spinlock (),
 		.waiting_kpids_base = new_mutex_kpid_list ()
 	};
 
@@ -38,6 +41,11 @@ static inline mutex_t new_mutex () {
 FAST
 static inline native_lock_t *mutex_get_native_lock (mutex_t *mutex) {
 	return &mutex->native_lock_base;
+}
+
+FAST
+static inline spinlock_t *mutex_get_spinlock (mutex_t *mutex) {
+	return &mutex->internal_spinlock_base;
 }
 
 FAST
