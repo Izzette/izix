@@ -14,7 +14,7 @@
 
 // 10 ms should be a good choice for most systems.
 // TODO: Base off bogomips.
-#define KTHREAD_PREEMPT_INTERVAL time_from_millis (10)
+#define KTHREAD_PREEMPT_INTERVAL time_from_micros (2500)
 
 static volatile bool kthread_preempt_init = false;
 static native_lock_t

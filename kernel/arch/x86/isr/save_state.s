@@ -3,23 +3,17 @@
 .file		"save_state.s"
 
 .macro	save_state
+	push	%ebp
+	mov	%esp,		%ebp
+	pusha
 	pushf
-	push	%eax
-	push	%ebx
-	push	%ecx
-	push	%edx
-	push	%esi
-	push	%edi
 .endm
 
 .macro	restore_state
-	pop	%edi
-	pop	%esi
-	pop	%edx
-	pop	%ecx
-	pop	%ebx
-	pop	%eax
 	popf
+	popa
+	mov	%ebp,		%esp
+	pop	%ebp
 .endm
 
 // vim: set ts=8 sw=8 noet syn=asm:

@@ -8,9 +8,6 @@
 	.globl	isr_irq\irq_num
 	.type	isr_irq\irq_num, @function
 isr_irq\irq_num:
-	push	%ebp
-	mov	%esp,		%ebp
-
 	save_state
 
 	xor	%ecx,		%ecx
@@ -47,9 +44,6 @@ isr_irq_handle:
 	call	irq_handler
 
 	restore_state
-
-	mov	%ebp,		%esp
-	pop	%ebp
 	iret
 	.size	isr_irq_handle,	.-isr_irq_handle
 

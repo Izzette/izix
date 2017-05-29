@@ -12,9 +12,6 @@
 	.globl	isr_gp
 	.type	isr_gp,		@function
 isr_gp:
-	push	%ebp
-	mov	%esp,		%ebp
-
 	save_state
 
 	// Put error code in %eax,
@@ -43,9 +40,6 @@ isr_gp:
 
 .Lisr_gp_fin:
 	restore_state
-
-	mov	%ebp,		%esp
-	pop	%ebp
 	iret
 	.size	isr_gp,		.-isr_gp
 

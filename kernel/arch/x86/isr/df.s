@@ -1,5 +1,7 @@
 // kernel/arch/x86/isr/df.s
 
+.include	"save_state.s"
+
 .file		"df.s"
 
 .code32
@@ -9,8 +11,7 @@
 	.globl	isr_df
 	.type	isr_df,		@function
 isr_df:
-	push	%ebp
-	mov	%esp,		%ebp
+	save_state
 
 	push	$isr_df_msg
 	call	kputs

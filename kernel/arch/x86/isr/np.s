@@ -12,9 +12,6 @@
 	.globl	isr_np
 	.type	isr_np,		@function
 isr_np:
-	push	%ebp
-	mov	%esp,		%ebp
-
 	save_state
 
 	// Put error code in %eax,
@@ -30,9 +27,6 @@ isr_np:
 	add	$0x4,		%esp
 
 	restore_state
-
-	mov	%ebp,		%esp
-	pop	%ebp
 	iret
 	.size	isr_np,		.-isr_np
 
