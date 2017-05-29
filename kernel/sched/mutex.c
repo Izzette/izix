@@ -38,6 +38,7 @@ void mutex_lock (mutex_t *mutex) {
 		// In case the lock has been released since our last attempt, we don't want
 		// to be waiting around for a lock that's already been released.
 		if (native_lock_try_lock (mutex_get_native_lock (mutex))) {
+			kthread_unlock_task ();
 			free (kpid_node);
 
 			break;
