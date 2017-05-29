@@ -156,7 +156,7 @@ objects_libk_strings := ffs.o
 objects_libk_strings := $(addprefix libk/strings/,$(objects_libk_strings))
 
 # libk format objects
-objects_libk_format := pad.o itoa.o sprintf.o
+objects_libk_format := pad.o itoa.o sprintf.o numeric.o
 objects_libk_format := $(addprefix libk/format/,$(objects_libk_format))
 
 objects_libk_collections := bintree.o linked_list.o sparse_collection.o
@@ -258,6 +258,9 @@ link_order := \
 # Toolchain variables #
 #######################
 
+# Date format
+AMERICAN_DATE ?= true
+
 # Our toolchain binaries.
 CC ?= gcc
 AR ?= ar
@@ -278,13 +281,20 @@ CFLAGS := \
 	-ffreestanding \
 	-Werror=format \
 	-DIZIX \
-	$(addprefix -DARCH_,$(shell echo $(ARCH) | tr a-z A-Z))
-
+	$(addprefix -DARCH_,$(shell echo $(ARCH) | tr a-z A-Z)) \
+	-DCOMPILE_YEAR=$(shell date +%y) \
+	-DCOMPILE_CENTURY=$(shell date +%C)
 ifeq (x86,$(ARCH))
 ifeq (izixboot,$(BOOTLOADER))
 CFLAGS := \
 	$(CFLAGS) \
 	-DIZIX_SUPPORT_E820_3X
+ifeq (true, $(AMERICAN_DATE))
+CFLAGS := \
+	$(CFLAGS) \
+	-DAMERICAN_DATE
+endif
+
 endif
 endif
 

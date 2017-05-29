@@ -43,6 +43,11 @@ int sprintf (char *, const char *, ...)
 int vsprintf (char *, const char *, va_list)
 	FORMAT(printf, 2, 0);
 
+FASTCALL
+unsigned char bcd_to_bin (unsigned char);
+FASTCALL
+unsigned char bin_to_bcd (unsigned char);
+
 #endif
 
 // vim: set ts=4 sw=4 noet syn=c:

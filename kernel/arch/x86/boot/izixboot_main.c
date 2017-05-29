@@ -31,6 +31,33 @@
 #define KERNEL_MAX_LENGTH (127 * (size_t)512)
 #define KERNEL_MAX_END    (KERNEL_START + KERNEL_MAX_LENGTH)
 
+#if !defined(IZIX)
+#define AMERICAN_DATE
+#endif
+
+static volatile int v = 0;
+static volatile int n = 0;
+
+void show_date () {
+	rtc_datetime_t datetime = rtc_get_datetime ();
+
+	kprintf (
+		"boot/izixboot_main: The current date and time is "
+		"%02hhd/%02hhd/%02hhd%02hhd %02hhd:%02hhd:%02hhd.\n",
+#ifdef AMERICAL_DATE
+		datetime.month,
+		datetime.monthday,
+#else
+		datetime.monthday,
+		datetime.month,
+#endif
+		datetime.century,
+		datetime.year,
+		datetime.hours,
+		datetime.minutes,
+		datetime.seconds);
+}
+
 COLD FORCE_ALIGN_ARG_POINTER
 void kernel_main (
 		uint32_t stack_start_u32,
@@ -175,6 +202,8 @@ void kernel_main (
 	enable_int ();
 
 	kthread_init (stack_region);
+
+	kthread_new_task (show_date);
 
 	kprintf (
 		"boot/izixboot_main: Early boot took aprox. %lld ms.\n",

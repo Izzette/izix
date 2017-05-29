@@ -33,7 +33,9 @@ typedef struct PACKED cmos_command_struct {
 	nmi_enable_t    nmi   : 1;
 } MAY_ALIAS cmos_command_t;
 
+FASTCALL
 void cmos_set_cmd (cmos_command_t);
+FASTCALL
 char cmos_get (cmos_register_t);
 // NEVER EVER set a non RTC register!  They are often used by the BIOS and may cause a
 // failure to boot.  This function will kpanic if it recieves a non-RTC register.
