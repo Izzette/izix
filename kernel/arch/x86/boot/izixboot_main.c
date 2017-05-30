@@ -111,12 +111,9 @@ void kernel_main (
 
 	volatile tty_chardev_driver_t *tty_chardev_driver_vga_text =
 		tty_chardev_driver_region.p;
-
 	*tty_chardev_driver_vga_text = new_tty_vga_driver ();
-
 	tty_chardev_driver_vga_text->init (
 		(tty_chardev_driver_t *)tty_chardev_driver_vga_text);
-
 	set_kprint_tty_chardev_driver (tty_chardev_driver_vga_text);
 
 	kprintf (
@@ -145,16 +142,6 @@ void kernel_main (
 	freemem_remove_region (stack_region);
 	freemem_remove_region (null_region);
 
-	// Adding tty driver must be deleayed until kprint and fremeem are initialized.
-	dev_add (tty_chardev_driver_vga_text->dev_driver);
-
-	tss_init (freemem_region_end (int_stack_region));
-
-	// TSS must be initialized before tss_get () does any good.
-	gdt_init (tss_get ());
-
-	tss_load (GDT_SUPERVISOR_TSS_SELECTOR);
-
 	idt_init ();
 
 	idt_set_isr (IDT_NP_VECTOR, isr_np);
@@ -179,31 +166,35 @@ void kernel_main (
 	idt_set_isr (IRQ_VECTOR_IRQ15, isr_irq15);
 
 	pic_8259_reinit ();
-	dev_add (pic_8259_get_device_driver ());
-
-	dev_add (pit_8253_get_device_driver ());
-	dev_add (rtc_get_device_driver ());
 
 	irq_init ();
+	idt_load ();
+	enable_int ();
 
+	// We want to get the date before we start the RTC interupts in clock_tick_start.
+	show_date ();
 	// Hooks need to be added to IRQ hook lists before the IDT is loaded.
 	clock_tick_start ();
 
-	idt_load ();
+	tss_init (freemem_region_end (int_stack_region));
+	// TSS must be initialized before tss_get () does any good.
+	gdt_init (tss_get ());
+	tss_load (GDT_SUPERVISOR_TSS_SELECTOR);
 
 	paging_data_t paging_data_base;
 	paging_init (&paging_data_base);
+
+	dev_add (tty_chardev_driver_vga_text->dev_driver);
+	dev_add (pic_8259_get_device_driver ());
+	dev_add (pit_8253_get_device_driver ());
+	dev_add (rtc_get_device_driver ());
 
 	e820_3x_map_physical (&paging_data_base);
 	dev_map_all (&paging_data_base);
 
 	paging_enable (&paging_data_base);
 
-	enable_int ();
-
 	kthread_init (stack_region);
-
-	kthread_new_task (show_date);
 
 	kprintf (
 		"boot/izixboot_main: Early boot took aprox. %lld ms.\n",
