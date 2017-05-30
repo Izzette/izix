@@ -227,7 +227,7 @@ rtc_datetime_t rtc_get_datetime () {
 		if (	seconds_register  != seconds_register_2nd  ||
 				minutes_register  != minutes_register_2nd  ||
 				hours_register    != hours_register_2nd    ||
-				weekday_register  != seconds_register_2nd  ||
+				weekday_register  != weekday_register_2nd  ||
 				monthday_register != monthday_register_2nd ||
 				month_register    != month_register_2nd  ||
 				year_register     != year_register_2nd)

@@ -11,9 +11,16 @@
 #define CMOS_CMD_PORT  0x70
 #define CMOS_DATA_PORT 0x71
 
+char cmos_last_cmd_register = 0x7f;
+
 FASTCALL FAST HOT
 void cmos_set_cmd (cmos_command_t cmd) {
-	outb (*(char *)&cmd, CMOS_CMD_PORT);
+	const char cmd_register = *(char *)&cmd;
+
+	if (cmos_last_cmd_register != cmd_register) {
+		cmos_last_cmd_register = cmd_register;
+		outb (cmd_register, CMOS_CMD_PORT);
+	}
 }
 
 FASTCALL FAST HOT
