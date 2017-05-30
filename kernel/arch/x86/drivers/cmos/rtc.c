@@ -229,7 +229,7 @@ rtc_datetime_t rtc_get_datetime () {
 				hours_register    != hours_register_2nd    ||
 				weekday_register  != weekday_register_2nd  ||
 				monthday_register != monthday_register_2nd ||
-				month_register    != month_register_2nd  ||
+				month_register    != month_register_2nd    ||
 				year_register     != year_register_2nd)
 			continue;
 
@@ -237,8 +237,10 @@ rtc_datetime_t rtc_get_datetime () {
 	}
 
 	// Will be unset if binary time.
-	const unsigned char hours_register_offset = 12 * (hours_register >> 7);
-	const unsigned char hours_register_low    = hours_register & 0x7f;
+	const unsigned char hours_register_offset =
+		12 * (hours_register >> 7);
+	const unsigned char hours_register_low =
+		(hours_register & 0x7f) - (rtc_12h == status_b.hour_format ? 1 : 0);
 
 	unsigned char
 		seconds,  minutes, hours, weekday,
@@ -246,7 +248,7 @@ rtc_datetime_t rtc_get_datetime () {
 	if (rtc_bcd == status_b.numeric) {
 		seconds  = bcd_to_bin (seconds_register);
 		minutes  = bcd_to_bin (minutes_register);
-		hours    = hours_register_offset + bcd_to_bin (hours_register_low) - 1;
+		hours    = hours_register_offset + bcd_to_bin (hours_register_low);
 		weekday  = bcd_to_bin (weekday_register);
 		monthday = bcd_to_bin (monthday_register);
 		month    = bcd_to_bin (month_register);
@@ -254,7 +256,7 @@ rtc_datetime_t rtc_get_datetime () {
 	} else {
 		seconds  = seconds_register;
 		minutes  = minutes_register;
-		hours    = hours_register_offset + hours_register_low - 1;
+		hours    = hours_register_offset + hours_register_low;
 		weekday  = weekday_register;
 		monthday = monthday_register;
 		month    = month_register;
